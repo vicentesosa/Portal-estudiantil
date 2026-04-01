@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Portal Estudiantil</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+</head>
+<body>
+
+  <!-- ========== HEADER ========== -->
+  <header class="header">
+    <div class="logo">
+      <i class="fas fa-graduation-cap"></i>
+      <span>Portal Estudiantil</span>
+    </div>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="inicio">
+        <i class="fas fa-home"></i><span>Inicio</span>
+      </button>
+      <button class="tab" data-tab="materias">
+        <i class="fas fa-book"></i><span>Materias</span>
+      </button>
+      <button class="tab" data-tab="tareas">
+        <i class="fas fa-tasks"></i><span>Tareas</span>
+      </button>
+      <button class="tab" data-tab="proyectos">
+        <i class="fas fa-project-diagram"></i><span>Proyectos</span>
+      </button>
+      <button class="tab" data-tab="calendario">
+        <i class="fas fa-calendar-alt"></i><span>Calendario</span>
+      </button>
+    </nav>
+
+    <div class="user-info">
+      <i class="fas fa-user-circle user-avatar"></i>
+      <div class="user-text">
+        <span class="user-name">Estudiante</span>
+        <span class="user-grade">5° Año</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========== PÁGINAS ========== -->
+
+  <!-- ── INICIO ── -->
+  <div class="page active" id="page-inicio">
+
+    <div class="inicio-hero">
+      <div class="inicio-hero-text">
+        <p class="hero-date" id="fechaHoy"></p>
+        <h1 class="hero-title">¡Buen día! <span class="wave">👋</span></h1>
+        <p class="hero-sub">Este es tu portal estudiantil. Navegá por las secciones usando los botones de abajo o el menú de arriba.</p>
+        <div class="hero-badges">
+          <span class="badge badge-success"><i class="fas fa-check-circle"></i> Sin tareas pendientes</span>
+          <span class="badge badge-success"><i class="fas fa-calendar-check"></i> Sin eventos esta semana</span>
+          <span class="badge badge-success"><i class="fas fa-star"></i> Sin proyectos activos</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats rápidos -->
+    <div class="inicio-stats">
+      <div class="stat-card">
+        <div class="stat-icon purple"><i class="fas fa-book"></i></div>
+        <div class="stat-info"><h3>6</h3><p>Materias</p></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon orange"><i class="fas fa-clipboard-list"></i></div>
+        <div class="stat-info"><h3>0</h3><p>Tareas pendientes</p></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-project-diagram"></i></div>
+        <div class="stat-info"><h3>0</h3><p>Proyectos activos</p></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon red"><i class="fas fa-bell"></i></div>
+        <div class="stat-info"><h3>0</h3><p>Prueba próxima</p></div>
+      </div>
+    </div>
+
+    <!-- Botones de acceso rápido -->
+    <div class="inicio-label">Acceso rápido</div>
+    <div class="quick-nav">
+      <button class="qnav-btn" data-goto="materias" style="--c:#6c63ff">
+        <div class="qnav-icon"><i class="fas fa-book"></i></div>
+        <div class="qnav-text">
+          <h3>Materias</h3>
+          <p>6 materias activas este cuatrimestre</p>
+        </div>
+        <i class="fas fa-arrow-right qnav-arrow"></i>
+      </button>
+      <button class="qnav-btn" data-goto="tareas" style="--c:#e74c3c">
+        <div class="qnav-icon"><i class="fas fa-tasks"></i></div>
+        <div class="qnav-text">
+          <h3>Tareas</h3>
+          <p>Sin tareas pendientes</p>
+        </div>
+        <i class="fas fa-arrow-right qnav-arrow"></i>
+      </button>
+      <button class="qnav-btn" data-goto="proyectos" style="--c:#e67e22">
+        <div class="qnav-icon"><i class="fas fa-project-diagram"></i></div>
+        <div class="qnav-text">
+          <h3>Proyectos</h3>
+          <p>Sin proyectos activos por el momento</p>
+        </div>
+        <i class="fas fa-arrow-right qnav-arrow"></i>
+      </button>
+      <button class="qnav-btn" data-goto="calendario" style="--c:#2980b9">
+        <div class="qnav-icon"><i class="fas fa-calendar-alt"></i></div>
+        <div class="qnav-text">
+          <h3>Calendario</h3>
+          <p>Sin eventos próximos agendados</p>
+        </div>
+        <i class="fas fa-arrow-right qnav-arrow"></i>
+      </button>
+    </div>
+
+    <!-- Actividades de la semana (resumen en inicio) -->
+    <div class="inicio-label">Actividades de esta semana</div>
+    <div class="empty-state">
+      <i class="fas fa-calendar-check"></i>
+      <p>No hay actividades agendadas para esta semana</p>
+    </div>
+
+  </div><!-- /page-inicio -->
+
+
+  <!-- ── MATERIAS ── -->
+  <div class="page" id="page-materias">
+    <div class="page-inner">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title"><i class="fas fa-book"></i> Materias</h2>
+          <p class="page-subtitle">Este cuatrimestre</p>
+        </div>
+        <button class="btn-add-plus" id="btnAgregarMateria">
+          <i class="fas fa-plus"></i>
+        </button>
+      </div>
+
+      <div class="materias-grid" id="materiasGrid">
+      </div>
+    </div>
+  </div><!-- /page-materias -->
+
+
+  <!-- ── TAREAS ── -->
+  <div class="page" id="page-tareas">
+    <div class="page-inner">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title"><i class="fas fa-tasks"></i> Tareas pendientes</h2>
+          <p class="page-subtitle">Organizá y seguí el estado de tus entregas</p>
+        </div>
+        <span class="pill">0 sin entregar</span>
+      </div>
+
+      <div class="tareas-cols">
+
+        <!-- Columna Pendientes -->
+        <div class="tareas-col">
+          <div class="col-head urgent-head">
+            <i class="fas fa-fire"></i> Urgentes
+            <span class="col-count">0</span>
+          </div>
+          <ul class="task-list">
+            <li class="no-tasks-msg"><i class="fas fa-check"></i> Sin urgentes</li>
+          </ul>
+        </div>
+
+        <!-- Columna Esta semana -->
+        <div class="tareas-col">
+          <div class="col-head week-head">
+            <i class="fas fa-calendar-week"></i> Esta semana
+            <span class="col-count">0</span>
+          </div>
+          <ul class="task-list">
+            <li class="no-tasks-msg"><i class="fas fa-check"></i> Sin tareas esta semana</li>
+          </ul>
+        </div>
+
+        <!-- Columna Completadas -->
+        <div class="tareas-col">
+          <div class="col-head done-head">
+            <i class="fas fa-check-circle"></i> Completadas
+            <span class="col-count" id="doneCount">0</span>
+          </div>
+          <ul class="task-list" id="doneList">
+            <li class="no-tasks-msg"><i class="fas fa-inbox"></i> Nada completado aún</li>
+          </ul>
+        </div>
+
+      </div>
+
+      <button class="btn-add-task" id="btnNuevaTarea"><i class="fas fa-plus"></i> Nueva tarea</button>
+    </div>
+  </div><!-- /page-tareas -->
+
+
+  <!-- ── PROYECTOS ── -->
+  <div class="page" id="page-proyectos">
+    <div class="page-inner">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title"><i class="fas fa-project-diagram"></i> Proyectos</h2>
+          <p class="page-subtitle">Seguimiento de proyectos y trabajos grupales</p>
+        </div>
+        <span class="pill">0 activos</span>
+      </div>
+
+      <div class="empty-state">
+        <i class="fas fa-project-diagram"></i>
+        <p>No hay proyectos activos por el momento</p>
+      </div>
+    </div>
+  </div><!-- /page-proyectos -->
+
+
+  <!-- ── CALENDARIO ── -->
+  <div class="page" id="page-calendario">
+    <div class="page-inner">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title"><i class="fas fa-calendar-alt"></i> Calendario</h2>
+          <p class="page-subtitle">Próximas pruebas, entregas y actividades</p>
+        </div>
+        <div class="cal-legend">
+          <span class="leg-item"><span class="leg-dot" style="background:#e74c3c"></span>Prueba</span>
+          <span class="leg-item"><span class="leg-dot" style="background:#e67e22"></span>Tarea</span>
+          <span class="leg-item"><span class="leg-dot" style="background:#6c63ff"></span>Proyecto</span>
+          <span class="leg-item"><span class="leg-dot" style="background:#2980b9"></span>Actividad</span>
+        </div>
+      </div>
+
+      <div class="cal-layout">
+
+        <!-- Mini calendario -->
+        <div class="cal-box">
+          <div id="calendarGrid"></div>
+        </div>
+
+        <!-- Lista de eventos -->
+        <div class="events-box">
+          <h3 class="events-title">Próximos eventos</h3>
+          <div class="events-list">
+            <div class="empty-state">
+              <i class="fas fa-calendar-check"></i>
+              <p>No hay eventos próximos agendados</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div><!-- /page-calendario -->
+
+  <!-- ========== MODAL NUEVA TAREA ========== -->
+  <div class="modal-overlay" id="modalTarea">
+    <div class="modal">
+      <div class="modal-header">
+        <h3><i class="fas fa-tasks"></i> Nueva tarea</h3>
+        <button class="modal-close" id="tareaClose"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <label class="modal-label">Nombre de la tarea</label>
+        <input class="modal-input" id="tareaNombre" type="text" placeholder="Ej: Ejercicios pág. 45..." autocomplete="off"/>
+
+        <label class="modal-label" style="margin-top:1rem">Materia</label>
+        <select class="modal-input modal-select" id="tareaMateria">
+          <option value="" disabled selected>Seleccioná una materia...</option>
+        </select>
+
+        <label class="modal-label" style="margin-top:1rem">Fecha de entrega</label>
+        <input class="modal-input modal-date" id="tareaFecha" type="date"/>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn-cancel" id="tareaCancel">Cancelar</button>
+        <button class="modal-btn-confirm" id="tareaConfirm">
+          <i class="fas fa-plus"></i> Agregar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== CONTEXT MENU MATERIA ========== -->
+  <div class="ctx-menu" id="ctxMenu">
+    <button class="ctx-item" id="ctxRename"><i class="fas fa-pencil-alt"></i> Modificar nombre</button>
+    <div class="ctx-divider"></div>
+    <button class="ctx-item ctx-danger" id="ctxDelete"><i class="fas fa-trash"></i> Eliminar materia</button>
+  </div>
+
+  <!-- ========== MODAL RENOMBRAR MATERIA ========== -->
+  <div class="modal-overlay" id="modalRename">
+    <div class="modal">
+      <div class="modal-header">
+        <h3><i class="fas fa-pencil-alt"></i> Modificar nombre</h3>
+        <button class="modal-close" id="renameClose"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <input
+          class="modal-input"
+          id="inputRename"
+          type="text"
+          placeholder="Nuevo nombre..."
+          autocomplete="off"
+        />
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn-cancel" id="renameCancel">Cancelar</button>
+        <button class="modal-btn-confirm" id="renameConfirm">
+          <i class="fas fa-check"></i> Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL AGREGAR MATERIA ========== -->
+  <div class="modal-overlay" id="modalMateria">
+    <div class="modal">
+      <div class="modal-header">
+        <h3><i class="fas fa-book"></i> Agregar materia</h3>
+        <button class="modal-close" id="modalClose"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <input
+          class="modal-input"
+          id="inputMateria"
+          type="text"
+          placeholder="Nombre de la materia..."
+          autocomplete="off"
+        />
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn-cancel" id="modalCancel">Cancelar</button>
+        <button class="modal-btn-confirm" id="modalConfirm">
+          <i class="fas fa-plus"></i> Agregar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
