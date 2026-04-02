@@ -20,6 +20,9 @@
       <button class="tab active" data-tab="inicio">
         <i class="fas fa-home"></i><span>Inicio</span>
       </button>
+      <button class="tab" data-tab="apuntes">
+        <i class="fas fa-sticky-note"></i><span>Apuntes</span>
+      </button>
       <button class="tab" data-tab="materias">
         <i class="fas fa-book"></i><span>Materias</span>
       </button>
@@ -28,6 +31,9 @@
       </button>
       <button class="tab" data-tab="proyectos">
         <i class="fas fa-project-diagram"></i><span>Proyectos</span>
+      </button>
+      <button class="tab" data-tab="examenes">
+        <i class="fas fa-file-alt"></i><span>Exámenes</span>
       </button>
       <button class="tab" data-tab="calendario">
         <i class="fas fa-calendar-alt"></i><span>Calendario</span>
@@ -65,11 +71,11 @@
     <div class="inicio-stats">
       <div class="stat-card">
         <div class="stat-icon purple"><i class="fas fa-book"></i></div>
-        <div class="stat-info"><h3>6</h3><p>Materias</p></div>
+        <div class="stat-info"><h3 id="statMaterias">0</h3><p>Materias</p></div>
       </div>
       <div class="stat-card">
         <div class="stat-icon orange"><i class="fas fa-clipboard-list"></i></div>
-        <div class="stat-info"><h3>0</h3><p>Tareas pendientes</p></div>
+        <div class="stat-info"><h3 id="statTareasPend">0</h3><p>Tareas pendientes</p></div>
       </div>
       <div class="stat-card">
         <div class="stat-icon green"><i class="fas fa-project-diagram"></i></div>
@@ -77,7 +83,7 @@
       </div>
       <div class="stat-card">
         <div class="stat-icon red"><i class="fas fa-bell"></i></div>
-        <div class="stat-info"><h3>0</h3><p>Prueba próxima</p></div>
+        <div class="stat-info"><h3 id="statExamenes">0</h3><p>Examen próximo</p></div>
       </div>
     </div>
 
@@ -120,12 +126,31 @@
 
     <!-- Actividades de la semana (resumen en inicio) -->
     <div class="inicio-label">Actividades de esta semana</div>
-    <div class="empty-state">
-      <i class="fas fa-calendar-check"></i>
-      <p>No hay actividades agendadas para esta semana</p>
+    <div id="actividadesSemana">
+      <div class="empty-state">
+        <i class="fas fa-calendar-check"></i>
+        <p>No hay actividades agendadas para esta semana</p>
+      </div>
     </div>
 
   </div><!-- /page-inicio -->
+
+
+  <!-- ── APUNTES ── -->
+  <div class="page" id="page-apuntes">
+    <div class="apuntes-page-header">
+      <div>
+        <h2 class="page-title"><i class="fas fa-sticky-note"></i> Apuntes</h2>
+        <p class="page-subtitle">Organizá tus apuntes por materia</p>
+      </div>
+    </div>
+    <div class="apuntes-container" id="apuntesContainer">
+      <div class="apuntes-empty" id="apuntesEmpty">
+        <i class="fas fa-sticky-note"></i>
+        <p>Agregá materias para empezar a organizar tus apuntes</p>
+      </div>
+    </div>
+  </div><!-- /page-apuntes -->
 
 
   <!-- ── MATERIAS ── -->
@@ -219,6 +244,28 @@
   </div><!-- /page-proyectos -->
 
 
+  <!-- ── EXÁMENES ── -->
+  <div class="page" id="page-examenes">
+    <div class="page-inner">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title"><i class="fas fa-file-alt"></i> Exámenes</h2>
+          <p class="page-subtitle">Próximas evaluaciones y fechas de examen</p>
+        </div>
+        <button class="btn-add-plus" id="btnNuevoExamen">
+          <i class="fas fa-plus"></i>
+        </button>
+      </div>
+      <div class="examenes-grid" id="examenesGrid">
+        <div class="empty-state" id="examenesEmpty">
+          <i class="fas fa-file-alt"></i>
+          <p>No hay exámenes registrados</p>
+        </div>
+      </div>
+    </div>
+  </div><!-- /page-examenes -->
+
+
   <!-- ── CALENDARIO ── -->
   <div class="page" id="page-calendario">
     <div class="page-inner">
@@ -228,7 +275,7 @@
           <p class="page-subtitle">Próximas pruebas, entregas y actividades</p>
         </div>
         <div class="cal-legend">
-          <span class="leg-item"><span class="leg-dot" style="background:#e74c3c"></span>Prueba</span>
+          <span class="leg-item"><span class="leg-dot" style="background:#e74c3c"></span>Examen</span>
           <span class="leg-item"><span class="leg-dot" style="background:#e67e22"></span>Tarea</span>
           <span class="leg-item"><span class="leg-dot" style="background:#6c63ff"></span>Proyecto</span>
           <span class="leg-item"><span class="leg-dot" style="background:#2980b9"></span>Actividad</span>
@@ -275,12 +322,122 @@
 
         <label class="modal-label" style="margin-top:1rem">Fecha de entrega</label>
         <input class="modal-input modal-date" id="tareaFecha" type="date"/>
+
+        <label class="modal-label" style="margin-top:1rem">URL <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(opcional)</span></label>
+        <input class="modal-input" id="tareaUrl" type="url" placeholder="https://..." autocomplete="off"/>
       </div>
       <div class="modal-footer">
         <button class="modal-btn-cancel" id="tareaCancel">Cancelar</button>
         <button class="modal-btn-confirm" id="tareaConfirm">
           <i class="fas fa-plus"></i> Agregar
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL NUEVO EXAMEN ========== -->
+  <div class="modal-overlay" id="modalExamen">
+    <div class="modal">
+      <div class="modal-header">
+        <h3><i class="fas fa-file-alt"></i> Nuevo examen</h3>
+        <button class="modal-close" id="examenClose"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <label class="modal-label">Materia</label>
+        <select class="modal-input modal-select" id="examenMateria">
+          <option value="" disabled selected>Seleccioná una materia...</option>
+        </select>
+
+        <label class="modal-label" style="margin-top:1rem">Tema del examen</label>
+        <input class="modal-input" id="examenTema" type="text" placeholder="Ej: Funciones lineales..." autocomplete="off"/>
+
+        <label class="modal-label" style="margin-top:1rem">Fecha del examen</label>
+        <input class="modal-input modal-date" id="examenFecha" type="date"/>
+
+        <label class="modal-label" style="margin-top:1rem">URL <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(opcional)</span></label>
+        <input class="modal-input" id="examenUrl" type="url" placeholder="https://..." autocomplete="off"/>
+
+        <label class="modal-label" style="margin-top:.65rem">Nombre del link <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(opcional)</span></label>
+        <input class="modal-input" id="examenNombreLink" type="text" placeholder="Ej: Apuntes de clase..." autocomplete="off"/>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn-cancel" id="examenCancel">Cancelar</button>
+        <button class="modal-btn-confirm" id="examenConfirm">
+          <i class="fas fa-plus"></i> Agregar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== CONTEXT MENU EXAMEN ========== -->
+  <div class="ctx-menu" id="ctxMenuExamen">
+    <button class="ctx-item" id="ctxExamenRename"><i class="fas fa-pencil-alt"></i> Cambiar nombre</button>
+    <button class="ctx-item" id="ctxExamenAddUrl"><i class="fas fa-link"></i> Agregar URL</button>
+    <div class="ctx-divider"></div>
+    <button class="ctx-item ctx-danger" id="ctxExamenDelete"><i class="fas fa-trash"></i> Eliminar examen</button>
+  </div>
+
+  <!-- ========== MODAL RENOMBRAR EXAMEN ========== -->
+  <div class="modal-overlay" id="modalExamenRename">
+    <div class="modal">
+      <div class="modal-header">
+        <h3><i class="fas fa-pencil-alt"></i> Cambiar nombre</h3>
+        <button class="modal-close" id="examenRenameClose"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <input class="modal-input" id="examenRenameInput" type="text" placeholder="Nuevo tema..." autocomplete="off"/>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn-cancel" id="examenRenameCancel">Cancelar</button>
+        <button class="modal-btn-confirm" id="examenRenameConfirm"><i class="fas fa-check"></i> Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL AGREGAR URL A EXAMEN ========== -->
+  <div class="modal-overlay" id="modalExamenUrl">
+    <div class="modal">
+      <div class="modal-header">
+        <h3><i class="fas fa-link"></i> Agregar URL</h3>
+        <button class="modal-close" id="examenUrlClose"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <label class="modal-label">URL</label>
+        <input class="modal-input" id="examenUrlInput" type="url" placeholder="https://..." autocomplete="off"/>
+        <label class="modal-label" style="margin-top:1rem">Nombre del link</label>
+        <input class="modal-input" id="examenUrlNombre" type="text" placeholder="Ej: Apuntes de clase..." autocomplete="off"/>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn-cancel" id="examenUrlCancel">Cancelar</button>
+        <button class="modal-btn-confirm" id="examenUrlConfirm"><i class="fas fa-plus"></i> Agregar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL DETALLE EXAMEN ========== -->
+  <div class="modal-overlay" id="modalDetalleExamen">
+    <div class="modal modal-detalle-examen">
+      <div class="modal-header">
+        <h3><i class="fas fa-file-alt"></i> <span id="detalleExamenTitleSpan"></span></h3>
+        <button class="modal-close" id="detalleExamenClose"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body" id="detalleExamenBody"></div>
+      <div class="modal-footer">
+        <button class="modal-btn-cancel" id="detalleExamenCerrar">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL DETALLE MATERIA ========== -->
+  <div class="modal-overlay" id="modalDetalleMateria">
+    <div class="modal modal-detalle">
+      <div class="modal-header">
+        <h3 id="detalleMateriaTitle"><i class="fas fa-book"></i> <span></span></h3>
+        <button class="modal-close" id="detalleClose"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body" id="detalleMateriaBody"></div>
+      <div class="modal-footer">
+        <button class="modal-btn-cancel" id="detalleCerrar">Cerrar</button>
       </div>
     </div>
   </div>
