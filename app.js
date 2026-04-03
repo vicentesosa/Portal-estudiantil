@@ -283,6 +283,17 @@ function actualizarActividadesSemana() {
 }
 
 // ===== APUNTES =====
+const apunteDropdown = document.getElementById('apunteDropdown');
+const modalApunte    = document.getElementById('modalApunte');
+let apunteTargetRow  = null;
+let apunteTipo       = null; // 'url' | 'gdoc' | 'nota'
+
+const APUNTE_TIPOS = {
+  url:  { icon: 'fas fa-link',        title: 'Agregar URL',             placeholder: 'https://' },
+  gdoc: { icon: 'fab fa-google-drive', title: 'Documento de Google',    placeholder: 'https://docs.google.com/...' },
+  nota: { icon: 'fas fa-pencil-alt',   title: 'Mi propio apunte',       placeholder: '' },
+};
+
 function construirApuntes() {
   const container = document.getElementById('apuntesContainer');
   container.innerHTML = '';
@@ -302,6 +313,20 @@ function construirApuntes() {
     row.className = 'apunte-row';
     row.style.setProperty('--c', color);
     row.dataset.materia = nombre;
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'apunte-add-btn';
+    addBtn.title = 'Agregar apunte';
+    addBtn.innerHTML = '<i class="fas fa-plus"></i>';
+    addBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      apunteTargetRow = row;
+      const rect = addBtn.getBoundingClientRect();
+      apunteDropdown.style.top  = (rect.bottom + 6) + 'px';
+      apunteDropdown.style.left = Math.min(rect.right - 210, window.innerWidth - 220) + 'px';
+      apunteDropdown.classList.toggle('open');
+    });
+
     row.innerHTML = `
       <div class="apunte-row-header">
         <div class="apunte-row-icon"><i class="fas fa-book"></i></div>
@@ -310,18 +335,187 @@ function construirApuntes() {
         <i class="fas fa-chevron-right apunte-row-chevron"></i>
       </div>
       <div class="apunte-row-body">
+        <div class="apunte-items-list"></div>
         <div class="apunte-body-empty">
-          <i class="fas fa-sticky-note"></i> Sin apuntes aún para esta materia
+          <i class="fas fa-sticky-note"></i> Sin apuntes aún — usá el <strong>+</strong> para agregar
         </div>
       </div>`;
 
-    row.querySelector('.apunte-row-header').addEventListener('click', () => {
-      row.classList.toggle('open');
-    });
+    // Insertar el botón + antes del chevron
+    const header = row.querySelector('.apunte-row-header');
+    header.insertBefore(addBtn, header.querySelector('.apunte-row-chevron'));
+
+    header.addEventListener('click', () => row.classList.toggle('open'));
 
     container.appendChild(row);
   });
 }
+
+// Cerrar dropdown al hacer click fuera
+document.addEventListener('click', e => {
+  if (!e.target.closest('.apunte-add-btn') && !e.target.closest('#apunteDropdown'))
+    apunteDropdown.classList.remove('open');
+});
+
+// Items del dropdown → acción según tipo
+document.querySelectorAll('.apunte-dropdown-item').forEach(btn => {
+  btn.addEventListener('click', () => {
+    apunteTipo = btn.dataset.tipo;
+    apunteDropdown.classList.remove('open');
+
+    // Documento de Google → abre docs.new en la cuenta activa del navegador
+    if (apunteTipo === 'gdoc') {
+      window.open('https://docs.new', '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    // Mi propio apunte → abre editor.html en nueva pestaña
+    if (apunteTipo === 'nota') {
+      const noteId = 'note_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+      window.open('editor.html?id=' + noteId, '_blank', 'noopener');
+      if (apunteTargetRow) {
+        const list     = apunteTargetRow.querySelector('.apunte-items-list');
+        const emptyMsg = apunteTargetRow.querySelector('.apunte-body-empty');
+        const itemEl   = document.createElement('div');
+        itemEl.className       = 'apunte-item apunte-item-nota';
+        itemEl.dataset.noteId  = noteId;
+        itemEl.innerHTML = `<i class="fas fa-align-left"></i><a href="editor.html?id=${noteId}" target="_blank" rel="noopener" class="apunte-nota-link">Apunte sin título</a>`;
+        itemEl.addEventListener('contextmenu', e => openCtxApunte(e, itemEl));
+        list.appendChild(itemEl);
+        if (emptyMsg) emptyMsg.style.display = 'none';
+        const count = list.querySelectorAll('.apunte-item').length;
+        apunteTargetRow.querySelector('.apunte-row-badge').textContent = `${count} apunte${count > 1 ? 's' : ''}`;
+        apunteTargetRow.classList.add('open');
+        guardarPortalData();
+      }
+      apunteTargetRow = null;
+      return;
+    }
+
+    const { icon, title, placeholder } = APUNTE_TIPOS[apunteTipo];
+    const titleEl = document.getElementById('apunteTipoTitle');
+    titleEl.querySelector('i').className = icon;
+    titleEl.querySelector('span').textContent = title;
+
+    const linkSec = document.getElementById('apunteLinkSection');
+    const notaSec = document.getElementById('apunteNotaSection');
+    linkSec.style.display = apunteTipo !== 'nota' ? '' : 'none';
+    notaSec.style.display = apunteTipo === 'nota' ? '' : 'none';
+
+    document.getElementById('apunteUrlInput').value      = '';
+    document.getElementById('apunteUrlInput').placeholder = placeholder;
+    document.getElementById('apunteNombreInput').value   = '';
+    document.getElementById('apunteTexto').value         = '';
+
+    modalApunte.classList.add('open');
+    setTimeout(() => {
+      if (apunteTipo === 'nota') document.getElementById('apunteTexto').focus();
+      else document.getElementById('apunteUrlInput').focus();
+    }, 120);
+  });
+});
+
+function closeModalApunte() { modalApunte.classList.remove('open'); }
+document.getElementById('apunteClose').addEventListener('click',  closeModalApunte);
+document.getElementById('apunteCancel').addEventListener('click', closeModalApunte);
+modalApunte.addEventListener('click', e => { if (e.target === modalApunte) closeModalApunte(); });
+document.getElementById('apunteConfirm').addEventListener('click', guardarApunte);
+document.getElementById('apunteTexto').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.ctrlKey) guardarApunte();
+});
+
+function guardarApunte() {
+  if (!apunteTargetRow) return;
+  const list     = apunteTargetRow.querySelector('.apunte-items-list');
+  const emptyMsg = apunteTargetRow.querySelector('.apunte-body-empty');
+
+  const raw    = document.getElementById('apunteUrlInput').value.trim();
+  const nombre = document.getElementById('apunteNombreInput').value.trim();
+  const url    = safeUrl(raw);
+  if (!url) { document.getElementById('apunteUrlInput').focus(); return; }
+  const icon = apunteTipo === 'gdoc' ? 'fab fa-google-drive' : 'fas fa-link';
+  const itemEl = document.createElement('div');
+  itemEl.className = `apunte-item apunte-item-${apunteTipo}`;
+  itemEl.innerHTML = `<i class="${icon}"></i><a href="${escHtml(url)}" target="_blank" rel="noopener noreferrer">${escHtml(nombre || raw)}</a>`;
+  itemEl.addEventListener('contextmenu', e => openCtxApunte(e, itemEl));
+
+  list.appendChild(itemEl);
+  if (emptyMsg) emptyMsg.style.display = 'none';
+
+  const count = list.querySelectorAll('.apunte-item').length;
+  apunteTargetRow.querySelector('.apunte-row-badge').textContent = `${count} apunte${count > 1 ? 's' : ''}`;
+  apunteTargetRow.classList.add('open');
+
+  closeModalApunte();
+  guardarPortalData();
+  apunteTargetRow = null;
+}
+
+// ===== CONTEXT MENU APUNTE =====
+const ctxMenuApunte  = document.getElementById('ctxMenuApunte');
+let ctxApunteTarget  = null; // el .apunte-item sobre el que se hizo clic derecho
+
+function openCtxApunte(e, itemEl) {
+  e.preventDefault();
+  ctxApunteTarget = itemEl;
+  ctxMenuApunte.style.left = Math.min(e.clientX, window.innerWidth  - 180) + 'px';
+  ctxMenuApunte.style.top  = Math.min(e.clientY, window.innerHeight - 80)  + 'px';
+  ctxMenuApunte.classList.add('open');
+}
+
+document.addEventListener('click', e => {
+  if (!ctxMenuApunte.contains(e.target)) ctxMenuApunte.classList.remove('open');
+});
+
+document.getElementById('ctxApunteDelete').addEventListener('click', () => {
+  ctxMenuApunte.classList.remove('open');
+  if (!ctxApunteTarget) return;
+  const row = ctxApunteTarget.closest('.apunte-row');
+  ctxApunteTarget.remove();
+  if (row) {
+    const count = row.querySelectorAll('.apunte-items-list .apunte-item').length;
+    row.querySelector('.apunte-row-badge').textContent = count > 0 ? `${count} apunte${count > 1 ? 's' : ''}` : '0 apuntes';
+    const emptyMsg = row.querySelector('.apunte-body-empty');
+    if (emptyMsg) emptyMsg.style.display = count === 0 ? '' : 'none';
+  }
+  guardarPortalData();
+  ctxApunteTarget = null;
+});
+
+document.getElementById('ctxApunteRename').addEventListener('click', () => {
+  ctxMenuApunte.classList.remove('open');
+  if (!ctxApunteTarget) return;
+  const linkEl = ctxApunteTarget.querySelector('a, .apunte-nota-link, span');
+  if (!linkEl) return;
+  const actual = linkEl.textContent.trim();
+  const nuevo  = prompt('Nuevo nombre:', actual);
+  if (nuevo && nuevo.trim() && nuevo.trim() !== actual) {
+    linkEl.textContent = nuevo.trim();
+    // Si es un apunte de editor, actualizar también en localStorage
+    const noteId = ctxApunteTarget.dataset.noteId;
+    if (noteId) {
+      try {
+        const raw  = localStorage.getItem('apunte_' + noteId);
+        const data = raw ? JSON.parse(raw) : {};
+        data.title = nuevo.trim();
+        localStorage.setItem('apunte_' + noteId, JSON.stringify(data));
+      } catch {}
+    }
+  }
+  ctxApunteTarget = null;
+});
+
+// Sincroniza títulos de apuntes cuando el editor guarda en localStorage
+window.addEventListener('storage', e => {
+  if (!e.key || !e.key.startsWith('apunte_')) return;
+  const noteId = e.key.slice('apunte_'.length);
+  const linkEl = document.querySelector(`.apunte-item[data-note-id="${noteId}"] .apunte-nota-link`);
+  if (!linkEl) return;
+  try {
+    const data = JSON.parse(e.newValue);
+    if (data && data.title) linkEl.textContent = data.title;
+  } catch {}
+});
 
 // ===== ANIMAR BARRAS DE PROGRESO =====
 function animateProgressBars() {
@@ -601,6 +795,20 @@ const tareaNombre  = document.getElementById('tareaNombre');
 const tareaMateria = document.getElementById('tareaMateria');
 const tareaFecha   = document.getElementById('tareaFecha');
 const tareaUrl     = document.getElementById('tareaUrl');
+const tareaArchivo = document.getElementById('tareaArchivo');
+const tareaFileName = document.getElementById('tareaFileName');
+const tareaFileLabel = document.getElementById('tareaFileLabel');
+let tareaArchivoData = null; // { name, dataUrl, type }
+
+tareaArchivo.addEventListener('change', () => {
+  const file = tareaArchivo.files[0];
+  if (!file) { tareaArchivoData = null; tareaFileName.textContent = 'Seleccionar archivo...'; tareaFileLabel.classList.remove('has-file'); return; }
+  tareaFileName.textContent = file.name;
+  tareaFileLabel.classList.add('has-file');
+  const reader = new FileReader();
+  reader.onload = e => { tareaArchivoData = { name: file.name, dataUrl: e.target.result, type: file.type }; };
+  reader.readAsDataURL(file);
+});
 
 // Columnas de tareas
 const colUrgentes  = document.querySelector('.tareas-cols .tareas-col:nth-child(1) .task-list');
@@ -622,6 +830,10 @@ function openModalTarea() {
   tareaFecha.value = '';
   tareaNombre.value = '';
   tareaUrl.value = '';
+  tareaArchivo.value = '';
+  tareaArchivoData = null;
+  tareaFileName.textContent = 'Seleccionar archivo...';
+  tareaFileLabel.classList.remove('has-file');
   modalTarea.classList.add('open');
   setTimeout(() => tareaNombre.focus(), 120);
 }
@@ -675,15 +887,40 @@ function crearTarea() {
   const dotColor  = diffDias <= 2 ? 'red' : diffDias <= 7 ? 'orange' : 'yellow';
 
   // Objeto de tarea compartido — permite actualizar estado desde cualquier lugar
-  const taskEntry = { nombre, materia, vence, url, completada: false };
+  const archivo   = tareaArchivoData ? { ...tareaArchivoData } : null;
+  const id        = 't' + tareaIdCounter++;
+  const taskEntry = { id, nombre, materia, vence, url, archivo, completada: false };
+
+  // Guardar imagen en localStorage por separado (evita inflar portal_tareas)
+  if (archivo?.type?.startsWith('image/') && archivo.dataUrl) {
+    try { localStorage.setItem('portal_archivo_' + id, archivo.dataUrl); } catch {}
+  }
 
   const noMsg = lista.querySelector('.no-tasks-msg');
   if (noMsg) noMsg.remove();
-
-  const id = 't' + tareaIdCounter++;
   const li = document.createElement('li');
   li.className = 'task-item' + (esUrgente ? ' urgent' : '');
   li.id = 'tarea-' + id;
+  const archivoHtml = (() => {
+    if (!archivo) return '';
+    if (archivo.type.startsWith('image/')) {
+      return `<div class="task-attachment">
+        <img src="${archivo.dataUrl}" alt="${escHtml(archivo.name)}" title="${escHtml(archivo.name)}"
+             onclick="window.open(this.src,'_blank')"/>
+        <a href="${archivo.dataUrl}" download="${escHtml(archivo.name)}">
+          <i class="fas fa-download"></i>${escHtml(archivo.name)}
+        </a>
+      </div>`;
+    }
+    const iconos = { 'application/pdf': 'fa-file-pdf', 'application/vnd.ms-powerpoint': 'fa-file-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'fa-file-powerpoint', 'application/msword': 'fa-file-word', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'fa-file-word', 'application/vnd.ms-excel': 'fa-file-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'fa-file-excel' };
+    const ico = iconos[archivo.type] || 'fa-file-alt';
+    return `<div class="task-attachment">
+      <a href="${archivo.dataUrl}" download="${escHtml(archivo.name)}">
+        <i class="fas ${ico}"></i>${escHtml(archivo.name)}
+      </a>
+    </div>`;
+  })();
+
   li.innerHTML = `
     <div class="task-check">
       <input type="checkbox" id="${id}"/>
@@ -692,6 +929,7 @@ function crearTarea() {
     <div class="task-body">
       <h4>${taskLink(nombre, url)}</h4>
       <p><i class="fas fa-book"></i> ${escHtml(materia)} &nbsp;·&nbsp; <i class="fas fa-clock"></i> ${venceTexto}</p>
+      ${archivoHtml}
     </div>
     <span class="priority-dot ${dotColor}"></span>
   `;
@@ -755,6 +993,54 @@ function actualizarCounts() {
   colCountUrgentes.textContent = colUrgentes.querySelectorAll('.task-item:not(.done-task)').length;
   colCountSemana.textContent   = colSemana.querySelectorAll('.task-item:not(.done-task)').length;
   actualizarStats();
+  guardarPortalData();
+}
+
+function guardarPortalData() {
+  try {
+    // Tareas (incluye nombre de archivo adjunto si hay)
+    const tareasSerial = eventsData.map(e => ({
+      id:             e.id || '',
+      nombre:         e.nombre,
+      materia:        e.materia,
+      vence:          e.vence instanceof Date ? e.vence.toISOString().split('T')[0] : e.vence,
+      completada:     e.completada,
+      url:            e.url || '',
+      archivoNombre:  e.archivo?.name  || '',
+      archivoTipo:    e.archivo?.type  || '',
+      archivoEsImagen: e.archivo?.type?.startsWith('image/') || false,
+    }));
+    localStorage.setItem('portal_tareas', JSON.stringify(tareasSerial));
+
+    // Exámenes
+    const examsSerial = examenesData.map(e => ({
+      materia: e.materia,
+      tema:    e.tema,
+      vence:   e.vence instanceof Date ? e.vence.toISOString().split('T')[0] : e.vence,
+      links:   e.links || [],
+    }));
+    localStorage.setItem('portal_examenes', JSON.stringify(examsSerial));
+
+    // Apuntes — serializar el DOM de cada fila
+    const apuntesSerial = {};
+    document.querySelectorAll('.apunte-row').forEach(row => {
+      const materia = row.dataset.materia;
+      if (!materia) return;
+      apuntesSerial[materia] = [];
+      row.querySelectorAll('.apunte-item').forEach(item => {
+        const link = item.querySelector('a');
+        const noteId = item.dataset.noteId || '';
+        if (item.classList.contains('apunte-item-nota')) {
+          apuntesSerial[materia].push({ tipo: 'nota', nombre: link?.textContent || 'Apunte', noteId });
+        } else if (item.classList.contains('apunte-item-gdoc')) {
+          apuntesSerial[materia].push({ tipo: 'gdoc', nombre: link?.textContent || 'Google Doc', url: link?.href || '' });
+        } else {
+          apuntesSerial[materia].push({ tipo: 'url', nombre: link?.textContent || '', url: link?.href || '' });
+        }
+      });
+    });
+    localStorage.setItem('portal_apuntes', JSON.stringify(apuntesSerial));
+  } catch {}
 }
 
 // ===== EXÁMENES =====
@@ -871,6 +1157,7 @@ function crearExamen() {
   actualizarActividadesSemana();
   buildCalendar(calYear, calMonth);
   actualizarStats();
+  guardarPortalData();
   closeModalExamen();
 }
 
@@ -907,7 +1194,7 @@ document.getElementById('ctxExamenDelete').addEventListener('click', () => {
     examenesGrid.appendChild(msg);
   }
   actualizarEventosList(); actualizarActividadesSemana();
-  buildCalendar(calYear, calMonth); actualizarStats();
+  buildCalendar(calYear, calMonth); actualizarStats(); guardarPortalData();
 });
 
 // ── Renombrar examen ──

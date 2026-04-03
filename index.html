@@ -325,10 +325,59 @@
 
         <label class="modal-label" style="margin-top:1rem">URL <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(opcional)</span></label>
         <input class="modal-input" id="tareaUrl" type="url" placeholder="https://..." autocomplete="off"/>
+
+        <label class="modal-label" style="margin-top:1rem">Archivo <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(opcional)</span></label>
+        <label class="tarea-file-label" id="tareaFileLabel">
+          <i class="fas fa-paperclip"></i> <span id="tareaFileName">Seleccionar archivo...</span>
+          <input type="file" id="tareaArchivo" accept="image/*,.pdf,.doc,.docx,.txt,.pptx,.xlsx" style="display:none"/>
+        </label>
       </div>
       <div class="modal-footer">
         <button class="modal-btn-cancel" id="tareaCancel">Cancelar</button>
         <button class="modal-btn-confirm" id="tareaConfirm">
+          <i class="fas fa-plus"></i> Agregar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== DROPDOWN APUNTES ========== -->
+  <div class="apunte-dropdown" id="apunteDropdown">
+    <button class="apunte-dropdown-item" data-tipo="url">
+      <i class="fas fa-link"></i> URL
+    </button>
+    <button class="apunte-dropdown-item" data-tipo="gdoc">
+      <i class="fab fa-google-drive"></i> Documento de Google
+    </button>
+    <button class="apunte-dropdown-item" data-tipo="nota">
+      <i class="fas fa-pencil-alt"></i> Mi propio apunte
+    </button>
+  </div>
+
+  <!-- ========== MODAL AGREGAR APUNTE ========== -->
+  <div class="modal-overlay" id="modalApunte">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="apunteTipoTitle"><i class="fas fa-plus"></i> <span></span></h3>
+        <button class="modal-close" id="apunteClose"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <!-- Sección link (URL y Google Doc) -->
+        <div id="apunteLinkSection">
+          <label class="modal-label">URL</label>
+          <input class="modal-input" id="apunteUrlInput" type="url" placeholder="https://..."/>
+          <label class="modal-label" style="margin-top:1rem">Nombre del link <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(opcional)</span></label>
+          <input class="modal-input" id="apunteNombreInput" type="text" placeholder="Ej: Apuntes de clase..."/>
+        </div>
+        <!-- Sección nota propia -->
+        <div id="apunteNotaSection" style="display:none">
+          <label class="modal-label">Escribí tu apunte</label>
+          <textarea class="modal-textarea" id="apunteTexto" rows="6" placeholder="Escribí tu apunte acá..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn-cancel" id="apunteCancel">Cancelar</button>
+        <button class="modal-btn-confirm" id="apunteConfirm">
           <i class="fas fa-plus"></i> Agregar
         </button>
       </div>
@@ -367,6 +416,13 @@
         </button>
       </div>
     </div>
+  </div>
+
+  <!-- ========== CONTEXT MENU APUNTE ========== -->
+  <div class="ctx-menu" id="ctxMenuApunte">
+    <button class="ctx-item" id="ctxApunteRename"><i class="fas fa-pencil-alt"></i> Cambiar nombre</button>
+    <div class="ctx-divider"></div>
+    <button class="ctx-item ctx-danger" id="ctxApunteDelete"><i class="fas fa-trash"></i> Eliminar apunte</button>
   </div>
 
   <!-- ========== CONTEXT MENU EXAMEN ========== -->

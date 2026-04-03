@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Apunte — Portal Estudiantil</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<style>
+/* ── VARIABLES ────────────────────────────────── */
+:root {
+  --bg:      #0f1117;
+  --bg2:     #161b27;
+  --card:    #1e2535;
+  --card2:   #242d42;
+  --border:  #2d3a55;
+  --accent:  #6c63ff;
+  --text:    #e8eaf6;
+  --muted:   #7c8db5;
+  --radius:  10px;
+  --sb:      240px;   /* sidebar width */
+  --tb:      52px;    /* topbar height */
+}
+
+*, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
+
+html, body {
+  height: 100%;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+
+/* ── LAYOUT ───────────────────────────────────── */
+.app { display:flex; flex-direction:column; height:100vh; }
+
+/* TOPBAR */
+.topbar {
+  height: var(--tb);
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0 1.2rem;
+  flex-shrink: 0;
+  z-index: 50;
+}
+.topbar-logo {
+  display: flex; align-items:center; gap:.45rem;
+  font-size:.9rem; font-weight:800; color:var(--accent);
+  flex-shrink:0;
+}
+.topbar-logo i { font-size:1.1rem; }
+.topbar-sep { width:1px; height:24px; background:var(--border); flex-shrink:0; }
+.topbar-title {
+  flex:1;
+  font-size:1rem;
+  font-weight:700;
+  background:transparent;
+  border:none;
+  outline:none;
+  color:var(--text);
+  min-width:0;
+}
+.topbar-title::placeholder { color:var(--muted); font-weight:400; }
+.topbar-status { font-size:.72rem; color:var(--muted); flex-shrink:0; }
+.topbar-words  { font-size:.72rem; color:var(--muted); flex-shrink:0; }
+.topbar-btn {
+  display:flex; align-items:center; gap:.4rem;
+  padding:.38rem .9rem;
+  border-radius:8px; border:none;
+  font-size:.8rem; font-weight:700; cursor:pointer;
+  transition:all .18s; flex-shrink:0;
+}
+.btn-save {
+  background:rgba(108,99,255,.18);
+  color:var(--accent);
+  border:1px solid rgba(108,99,255,.35);
+}
+.btn-save:hover { background:rgba(108,99,255,.32); }
+
+/* BODY (sidebar + canvas) */
+.editor-body { display:flex; flex:1; overflow:hidden; }
+
+/* SIDEBAR */
+.sidebar {
+  width: var(--sb);
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  flex-shrink:0;
+  padding-bottom: 1.5rem;
+}
+.sidebar::-webkit-scrollbar { width:5px; }
+.sidebar::-webkit-scrollbar-track { background:transparent; }
+.sidebar::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
+
+.sb-section { padding:.6rem .8rem .3rem; }
+.sb-label {
+  font-size:.62rem; font-weight:800;
+  text-transform:uppercase; letter-spacing:.1em;
+  color:var(--muted);
+  padding:.55rem .2rem .3rem;
+  display:block;
+}
+.sb-divider { height:1px; background:var(--border); margin:.3rem 0; }
+
+/* Toolbar rows */
+.sb-row {
+  display:flex; flex-wrap:wrap; gap:.25rem;
+  margin:.25rem 0;
+}
+.tb-btn {
+  display:flex; align-items:center; justify-content:center;
+  width:30px; height:30px;
+  border-radius:7px; border:none;
+  background:transparent; color:var(--text);
+  font-size:.82rem; cursor:pointer;
+  transition:background .15s, color .15s;
+  flex-shrink:0;
+}
+.tb-btn:hover  { background:var(--card2); color:var(--accent); }
+.tb-btn.active { background:rgba(108,99,255,.22); color:var(--accent); }
+.tb-btn i { pointer-events:none; }
+
+/* Full-width toolbar buttons */
+.tb-btn-full {
+  display:flex; align-items:center; gap:.55rem;
+  width:100%; padding:.45rem .6rem;
+  border-radius:7px; border:none;
+  background:transparent; color:var(--text);
+  font-size:.83rem; font-weight:600;
+  cursor:pointer; text-align:left;
+  transition:background .15s, color .15s;
+}
+.tb-btn-full:hover  { background:var(--card2); color:var(--accent); }
+.tb-btn-full i { color:var(--muted); width:14px; text-align:center; transition:color .15s; }
+.tb-btn-full:hover i { color:var(--accent); }
+
+/* Selects */
+.tb-select {
+  width:100%; height:30px;
+  background:var(--card2); border:1px solid var(--border);
+  border-radius:7px; color:var(--text);
+  font-size:.8rem; padding:0 .5rem;
+  outline:none; cursor:pointer;
+  margin:.2rem 0;
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%237c8db5' d='M5 7L1 3h8z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right .5rem center;
+  padding-right:1.6rem;
+}
+.tb-select:focus { border-color:var(--accent); }
+.tb-select option { background:#1e2535; }
+
+/* Font size row */
+.sb-size-row {
+  display:flex; align-items:center; gap:.3rem; margin:.2rem 0;
+}
+.tb-size-input {
+  width:46px; height:30px;
+  background:var(--card2); border:1px solid var(--border);
+  border-radius:7px; color:var(--text);
+  font-size:.82rem; text-align:center;
+  outline:none;
+}
+.tb-size-input:focus { border-color:var(--accent); }
+
+/* Color row */
+.sb-color-row {
+  display:flex; align-items:center; gap:.4rem; margin:.2rem 0;
+}
+.color-btn-wrap {
+  display:flex; align-items:center; gap:.2rem;
+  padding:.3rem .5rem;
+  border-radius:7px; cursor:pointer;
+  border:1px solid var(--border);
+  background:var(--card2);
+  transition:background .15s;
+  font-size:.76rem; color:var(--muted);
+}
+.color-btn-wrap:hover { background:var(--card); color:var(--text); }
+.color-btn-wrap input[type=color] {
+  width:18px; height:18px;
+  border:none; background:none;
+  cursor:pointer; padding:0;
+  border-radius:3px; overflow:hidden;
+}
+
+/* CANVAS */
+.canvas {
+  flex:1; overflow-y:auto; overflow-x:auto;
+  background:var(--bg);
+  display:flex; justify-content:center; align-items:flex-start;
+  padding:2.5rem 0 4rem;
+  min-width:0;
+}
+.canvas::-webkit-scrollbar { width:8px; }
+.canvas::-webkit-scrollbar-track { background:var(--bg); }
+.canvas::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
+
+/* DOCUMENT PAGE */
+.doc-page {
+  background:#fff;
+  color:#1a1a1a;
+  width:794px;
+  min-height:1123px;
+  padding:72px 80px 80px;
+  border-radius:0;
+  box-shadow:0 0 40px rgba(0,0,0,.45);
+  flex-shrink:0;
+  position:relative;
+}
+
+/* Separador visual entre páginas */
+.page-break-bar {
+  position: absolute;
+  left: -60px; right: -60px;
+  height: 28px;
+  background: var(--bg);
+  pointer-events: none;
+  z-index: 4;
+  display: flex; align-items: center; justify-content: center;
+}
+.page-break-bar::before,
+.page-break-bar::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; height: 5px;
+}
+.page-break-bar::before { top: 0;    background: linear-gradient(to bottom, rgba(0,0,0,.18), transparent); }
+.page-break-bar::after  { bottom: 0; background: linear-gradient(to top,   rgba(0,0,0,.18), transparent); }
+.page-break-label {
+  font-size: .6rem; color: #aaa; letter-spacing: .08em;
+  text-transform: uppercase; user-select: none;
+}
+
+/* Editor content */
+#editorContent {
+  outline:none;
+  min-height:900px;
+  font-family:Arial, sans-serif;
+  font-size:11pt;
+  line-height:1.65;
+  color:#1a1a1a;
+  word-break:break-word;
+}
+#editorContent:empty::before {
+  content:attr(data-placeholder);
+  color:#aaa;
+  pointer-events:none;
+}
+#editorContent h1 { font-size:2em; font-weight:700; margin:.6em 0 .3em; }
+#editorContent h2 { font-size:1.5em; font-weight:700; margin:.5em 0 .3em; }
+#editorContent h3 { font-size:1.25em; font-weight:600; margin:.4em 0 .25em; }
+#editorContent h4 { font-size:1.1em; font-weight:600; margin:.3em 0 .2em; }
+#editorContent ul, #editorContent ol { padding-left:2em; margin:.4em 0; }
+#editorContent li { margin:.15em 0; }
+#editorContent blockquote {
+  border-left:3px solid #6c63ff;
+  padding:.5em 1em; margin:.5em 0;
+  color:#555; background:#f5f4ff;
+}
+#editorContent a { color:#6c63ff; }
+#editorContent img { max-width:100%; border-radius:4px; }
+#editorContent hr { border:none; border-top:1px solid #ddd; margin:1em 0; }
+#editorContent table { border-collapse:collapse; width:100%; margin:.5em 0; }
+#editorContent td, #editorContent th {
+  border:1px solid #ccc; padding:.4em .6em;
+  min-width:60px;
+}
+#editorContent th { background:#f0f0f0; font-weight:700; }
+
+/* ── AI PANEL ─────────────────────────────────── */
+.ai-panel {
+  width: 400px; flex-shrink: 0;
+  background: var(--bg2);
+  border-left: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.ai-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .7rem 1rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.ai-panel-title {
+  font-size: .85rem; font-weight: 800; color: var(--text);
+  display: flex; align-items: center; gap: .45rem;
+}
+.ai-panel-title i { color: var(--accent); }
+.ai-ham-wrap { position: relative; }
+.ai-ham-btn {
+  background: transparent; border: none; color: var(--muted);
+  cursor: pointer; font-size: .95rem; padding: .3rem .4rem;
+  border-radius: 6px; transition: background .15s, color .15s;
+}
+.ai-ham-btn:hover { background: var(--card2); color: var(--text); }
+.ai-ham-menu {
+  position: absolute; right: 0; top: calc(100% + 6px);
+  width: 230px; background: var(--card);
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: .4rem; z-index: 200;
+  box-shadow: 0 8px 32px rgba(0,0,0,.5);
+  display: none;
+}
+.ai-ham-menu.open { display: block; }
+.ai-ham-item {
+  display: flex; align-items: center; gap: .5rem;
+  width: 100%; background: transparent; border: none;
+  color: var(--text); font-size: .82rem;
+  padding: .5rem .65rem; border-radius: 7px;
+  cursor: pointer; text-align: left; transition: background .15s;
+}
+.ai-ham-item:hover { background: var(--card2); }
+.ai-ham-item i { color: var(--accent); width: 14px; flex-shrink: 0; }
+.ai-ham-divider { height: 1px; background: var(--border); margin: .35rem 0; }
+.ai-conv-btn {
+  display: flex; align-items: center; gap: .45rem;
+  width: 100%; background: transparent; border: none;
+  color: var(--muted); font-size: .78rem;
+  padding: .45rem .65rem; border-radius: 7px;
+  cursor: pointer; text-align: left; transition: background .15s, color .15s;
+}
+.ai-conv-btn span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ai-conv-btn:hover { background: var(--card2); color: var(--text); }
+.ai-conv-btn.active { color: var(--accent); background: rgba(108,99,255,.12); }
+.ai-conv-btn i { flex-shrink: 0; font-size: .7rem; }
+/* key setup */
+.ai-key-section { padding: 1rem; flex-shrink: 0; }
+.ai-key-section p { font-size:.78rem; color:var(--muted); margin-bottom:.65rem; line-height:1.55; }
+.ai-key-row { display:flex; gap:.5rem; }
+.ai-key-row input {
+  flex:1; background:#2a344d; border:1px solid #3a4d70;
+  border-radius:8px; color:var(--text); font-size:.82rem;
+  padding:.55rem .7rem; outline:none; font-family:inherit;
+  transition:border-color .15s;
+}
+.ai-key-row input:focus { border-color: var(--accent); }
+.ai-key-row input::placeholder { color:#4e6080; }
+/* chat section */
+.ai-chat-section {
+  display: flex; flex-direction: column;
+  flex: 1; overflow: hidden;
+}
+.ai-conv-name-bar {
+  font-size: .7rem; font-weight: 700; color: var(--muted);
+  padding: .45rem 1rem .2rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+.ai-chat-history {
+  flex: 1; overflow-y: auto;
+  display: flex; flex-direction: column; gap: .6rem;
+  padding: .75rem 1rem;
+}
+.ai-chat-history::-webkit-scrollbar { width: 4px; }
+.ai-chat-history::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+.ai-bubble {
+  padding: .55rem .8rem; border-radius: 10px;
+  font-size: .82rem; line-height: 1.55; max-width: 94%;
+  white-space: pre-wrap;
+}
+.ai-bubble-user {
+  background: rgba(108,99,255,.22); color: var(--text);
+  align-self: flex-end; border-radius: 10px 10px 3px 10px;
+}
+.ai-bubble-bot {
+  background: var(--card2); color: var(--text);
+  align-self: flex-start; border-radius: 10px 10px 10px 3px;
+}
+.ai-bubble-bot.thinking { color: var(--muted); font-style: italic; }
+.ai-input-area {
+  flex-shrink: 0; padding: .6rem .75rem .75rem;
+  border-top: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: .4rem;
+}
+.ai-input-row { display: flex; gap: .5rem; align-items: flex-end; }
+.ai-input-row textarea {
+  flex: 1; resize: none; min-height: 40px; max-height: 100px;
+  background: #2a344d; border: 1px solid #3a4d70;
+  border-radius: 9px; color: var(--text); font-size: .82rem;
+  padding: .55rem .75rem; outline: none; font-family: inherit;
+  transition: border-color .15s; overflow-y: auto; line-height: 1.45;
+}
+.ai-input-row textarea:focus { border-color: var(--accent); }
+.ai-input-row textarea::placeholder { color: #4e6080; }
+.ai-send-btn {
+  background: var(--accent); color: #fff; border: none;
+  border-radius: 9px; padding: .52rem .7rem; cursor: pointer;
+  font-size: .88rem; flex-shrink: 0; transition: background .15s;
+  align-self: flex-end;
+}
+.ai-send-btn:hover { background: #7c73ff; }
+.ai-send-btn:disabled { background: var(--border); cursor: not-allowed; }
+.ai-key-change-btn {
+  background: transparent; border: none; color: var(--muted);
+  font-size: .68rem; cursor: pointer; text-decoration: underline;
+  text-align: right; padding: 0;
+}
+
+/* ── MODAL IMAGEN / LINK ─────────────────────── */
+.modal-mask {
+  position:fixed; inset:0; z-index:500;
+  background:rgba(0,0,0,.6); backdrop-filter:blur(6px);
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity .2s;
+}
+.modal-mask.open { opacity:1; pointer-events:all; }
+.modal-box {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:14px; padding:1.6rem; width:380px;
+  box-shadow:0 20px 60px rgba(0,0,0,.6);
+  transform:translateY(16px) scale(.97);
+  transition:transform .22s cubic-bezier(.34,1.56,.64,1);
+}
+.modal-mask.open .modal-box { transform:translateY(0) scale(1); }
+.modal-box h4 {
+  font-size:.95rem; font-weight:800;
+  margin-bottom:1rem; display:flex; align-items:center; gap:.5rem;
+}
+.modal-box h4 i { color:var(--accent); }
+.modal-inp {
+  width:100%; background:#2a344d; border:1px solid #3a4d70;
+  border-radius:8px; padding:.7rem .9rem;
+  color:var(--text); font-size:.9rem; outline:none;
+  margin-bottom:.7rem; font-family:inherit;
+}
+.modal-inp::placeholder { color:#4e6080; }
+.modal-inp:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(108,99,255,.18); }
+.modal-footer {
+  display:flex; justify-content:flex-end; gap:.6rem; margin-top:.4rem;
+}
+.modal-btn {
+  padding:.45rem 1.1rem; border-radius:8px; border:none;
+  font-size:.83rem; font-weight:700; cursor:pointer; transition:all .18s;
+}
+.modal-btn-cancel {
+  background:transparent; color:var(--muted);
+  border:1px solid var(--border);
+}
+.modal-btn-cancel:hover { background:var(--card2); color:var(--text); }
+.modal-btn-confirm {
+  background:var(--accent); color:#fff;
+}
+.modal-btn-confirm:hover { background:#7c74ff; }
+
+/* Tab buttons inside image modal */
+.modal-tabs {
+  display:flex; gap:.3rem; margin-bottom:.9rem;
+}
+.modal-tab {
+  padding:.3rem .75rem; border-radius:6px; border:none;
+  background:var(--card2); color:var(--muted);
+  font-size:.78rem; font-weight:700; cursor:pointer; transition:all .15s;
+}
+.modal-tab.active { background:rgba(108,99,255,.2); color:var(--accent); }
+
+@media (max-width:900px) {
+  .doc-page { width:100%; padding:2rem 1.5rem; }
+  .sidebar  { width:200px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ══ TOPBAR ══════════════════════════════════════════════════════ -->
+  <div class="topbar">
+    <div class="topbar-logo"><i class="fas fa-graduation-cap"></i> Portal Estudiantil</div>
+    <div class="topbar-sep"></div>
+    <input class="topbar-title" id="docTitle" type="text" placeholder="Sin título..." spellcheck="false"/>
+    <span class="topbar-words" id="wordCount">0 palabras</span>
+    <span class="topbar-status" id="saveStatus">Sin guardar</span>
+    <button class="topbar-btn btn-save" id="btnSave">
+      <i class="fas fa-save"></i> Guardar
+    </button>
+  </div>
+
+  <!-- ══ BODY ════════════════════════════════════════════════════════ -->
+  <div class="editor-body">
+
+    <!-- ── SIDEBAR ─────────────────────────────────────────────────── -->
+    <aside class="sidebar">
+
+      <!-- Deshacer / Rehacer -->
+      <div class="sb-section">
+        <div class="sb-row">
+          <button class="tb-btn" title="Deshacer (Ctrl+Z)" onclick="ec('undo')"><i class="fas fa-undo"></i></button>
+          <button class="tb-btn" title="Rehacer (Ctrl+Y)"  onclick="ec('redo')"><i class="fas fa-redo"></i></button>
+        </div>
+      </div>
+      <div class="sb-divider"></div>
+
+      <!-- TEXTO -->
+      <div class="sb-section">
+        <span class="sb-label">Texto</span>
+
+        <!-- Fuente -->
+        <select class="tb-select" id="selFont" title="Fuente" onchange="ec('fontName', this.value)">
+          <option value="Arial">Arial</option>
+          <option value="Times New Roman">Times New Roman</option>
+          <option value="Courier New">Courier New</option>
+          <option value="Georgia">Georgia</option>
+          <option value="Verdana">Verdana</option>
+          <option value="Trebuchet MS">Trebuchet MS</option>
+          <option value="Impact">Impact</option>
+          <option value="Tahoma">Tahoma</option>
+          <option value="Palatino">Palatino</option>
+        </select>
+
+        <!-- Tamaño -->
+        <div class="sb-size-row">
+          <input class="tb-size-input" id="inpSize" type="number" value="11" min="6" max="96"
+                 title="Tamaño de fuente (pt)" oninput="applySize(this.value)" onchange="applySize(this.value)"/>
+          <button class="tb-btn" title="Reducir tamaño" onclick="changeSize(-1)"><i class="fas fa-minus"></i></button>
+          <button class="tb-btn" title="Aumentar tamaño" onclick="changeSize(1)"><i class="fas fa-plus"></i></button>
+        </div>
+
+        <!-- Negrita / Cursiva / Subrayado / Tachado -->
+        <div class="sb-row">
+          <button class="tb-btn" id="btn-bold"    title="Negrita (Ctrl+B)"    onclick="ec('bold')">        <i class="fas fa-bold"></i></button>
+          <button class="tb-btn" id="btn-italic"  title="Cursiva (Ctrl+I)"   onclick="ec('italic')">      <i class="fas fa-italic"></i></button>
+          <button class="tb-btn" id="btn-under"   title="Subrayado (Ctrl+U)" onclick="ec('underline')">   <i class="fas fa-underline"></i></button>
+          <button class="tb-btn" id="btn-strike"  title="Tachado"             onclick="ec('strikeThrough')"><i class="fas fa-strikethrough"></i></button>
+        </div>
+
+        <!-- Super / Sub -->
+        <div class="sb-row">
+          <button class="tb-btn" title="Superíndice" onclick="ec('superscript')"><i class="fas fa-superscript"></i></button>
+          <button class="tb-btn" title="Subíndice"   onclick="ec('subscript')">  <i class="fas fa-subscript"></i></button>
+        </div>
+
+        <!-- Colores -->
+        <div class="sb-color-row">
+          <div class="color-btn-wrap" title="Color de texto">
+            <i class="fas fa-font" style="color:var(--muted)"></i>
+            <input type="color" id="colorText" value="#1a1a1a"
+                   oninput="ec('foreColor', this.value)"/>
+            <span>Texto</span>
+          </div>
+          <div class="color-btn-wrap" title="Color de fondo / resaltado">
+            <i class="fas fa-highlighter" style="color:var(--muted)"></i>
+            <input type="color" id="colorBg" value="#ffff00"
+                   oninput="ec('backColor', this.value)"/>
+            <span>Fondo</span>
+          </div>
+        </div>
+      </div>
+      <div class="sb-divider"></div>
+
+      <!-- PÁRRAFO -->
+      <div class="sb-section">
+        <span class="sb-label">Párrafo</span>
+
+        <!-- Formato / Encabezados -->
+        <select class="tb-select" id="selFormat" title="Formato de párrafo" onchange="applyFormat(this.value)">
+          <option value="p">Texto normal</option>
+          <option value="h1">Encabezado 1</option>
+          <option value="h2">Encabezado 2</option>
+          <option value="h3">Encabezado 3</option>
+          <option value="h4">Encabezado 4</option>
+          <option value="blockquote">Cita</option>
+          <option value="pre">Código</option>
+        </select>
+
+        <!-- Alineación -->
+        <div class="sb-row">
+          <button class="tb-btn" id="btn-jl" title="Alinear izquierda"  onclick="ec('justifyLeft')">  <i class="fas fa-align-left"></i></button>
+          <button class="tb-btn" id="btn-jc" title="Centrar"            onclick="ec('justifyCenter')"><i class="fas fa-align-center"></i></button>
+          <button class="tb-btn" id="btn-jr" title="Alinear derecha"    onclick="ec('justifyRight')"> <i class="fas fa-align-right"></i></button>
+          <button class="tb-btn" id="btn-jf" title="Justificar"         onclick="ec('justifyFull')">  <i class="fas fa-align-justify"></i></button>
+        </div>
+
+        <!-- Listas -->
+        <div class="sb-row">
+          <button class="tb-btn" id="btn-ul" title="Lista con viñetas"  onclick="ec('insertUnorderedList')"><i class="fas fa-list-ul"></i></button>
+          <button class="tb-btn" id="btn-ol" title="Lista numerada"      onclick="ec('insertOrderedList')">  <i class="fas fa-list-ol"></i></button>
+        </div>
+
+        <!-- Sangría -->
+        <div class="sb-row">
+          <button class="tb-btn" title="Reducir sangría"   onclick="ec('outdent')"><i class="fas fa-outdent"></i></button>
+          <button class="tb-btn" title="Aumentar sangría"  onclick="ec('indent')"> <i class="fas fa-indent"></i></button>
+        </div>
+
+        <!-- Interlineado -->
+        <select class="tb-select" title="Interlineado" onchange="setLineHeight(this.value)">
+          <option value="1.2">Interlineado 1.2</option>
+          <option value="1.5">Interlineado 1.5</option>
+          <option value="1.65" selected>Interlineado 1.65</option>
+          <option value="2">Interlineado 2</option>
+          <option value="2.5">Interlineado 2.5</option>
+          <option value="3">Interlineado 3</option>
+        </select>
+      </div>
+      <div class="sb-divider"></div>
+
+      <!-- INSERTAR -->
+      <div class="sb-section">
+        <span class="sb-label">Insertar</span>
+        <button class="tb-btn-full" onclick="openImgModal()">    <i class="fas fa-image"></i> Imagen</button>
+        <button class="tb-btn-full" onclick="openLinkModal()">   <i class="fas fa-link"></i>  Link</button>
+        <button class="tb-btn-full" onclick="ec('insertHorizontalRule')"><i class="fas fa-minus"></i> Línea horizontal</button>
+        <button class="tb-btn-full" onclick="insertTable()">     <i class="fas fa-table"></i> Tabla (3×3)</button>
+      </div>
+      <div class="sb-divider"></div>
+
+      <!-- FORMATO -->
+      <div class="sb-section">
+        <span class="sb-label">Formato</span>
+        <button class="tb-btn-full" onclick="ec('removeFormat')">        <i class="fas fa-eraser"></i>    Limpiar formato</button>
+        <button class="tb-btn-full" onclick="ec('selectAll')">           <i class="fas fa-object-group"></i> Seleccionar todo</button>
+        <button class="tb-btn-full" onclick="printDoc()">                <i class="fas fa-print"></i>     Imprimir</button>
+      </div>
+
+    </aside><!-- /sidebar -->
+
+    <!-- ── CANVAS ───────────────────────────────────────────────────── -->
+    <main class="canvas" id="canvas">
+      <div class="doc-page">
+        <div id="editorContent"
+             contenteditable="true"
+             spellcheck="true"
+             data-placeholder="Empezá a escribir tu apunte..."></div>
+      </div>
+    </main>
+
+    <!-- ── PANEL IA ──────────────────────────────────────────────── -->
+    <div class="ai-panel" id="aiPanel">
+
+      <!-- Header -->
+      <div class="ai-panel-header">
+        <span class="ai-panel-title"><i class="fas fa-robot"></i> Asistente IA</span>
+        <div class="ai-ham-wrap">
+          <button class="ai-ham-btn" id="aiHamBtn" title="Conversaciones"><i class="fas fa-bars"></i></button>
+          <div class="ai-ham-menu" id="aiHamMenu">
+            <button class="ai-ham-item" id="aiNewConvBtn"><i class="fas fa-plus"></i> Nueva conversación</button>
+            <div class="ai-ham-divider"></div>
+            <div id="aiConvList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Key setup -->
+      <div class="ai-key-section" id="aiKeySection">
+        <p>Usá <strong style="color:var(--text)">Groq</strong> (gratuito, sin tarjeta).<br>
+           Obtené tu key en <strong style="color:var(--accent)">console.groq.com</strong> → API Keys → Create API Key.</p>
+        <div class="ai-key-row">
+          <input id="aiKeyInput" type="password" placeholder="Pegá tu API key de Groq…"/>
+          <button class="ai-send-btn" id="aiKeySave">Guardar</button>
+        </div>
+      </div>
+
+      <!-- Chat -->
+      <div class="ai-chat-section" id="aiChatSection" style="display:none">
+        <div class="ai-conv-name-bar" id="aiConvNameBar">Nueva conversación</div>
+        <div class="ai-chat-history" id="aiChatHistory"></div>
+        <div class="ai-input-area">
+          <div class="ai-input-row">
+            <textarea id="aiInput" rows="1" placeholder="Escribí tu pregunta…"></textarea>
+            <button class="ai-send-btn" id="aiSendBtn"><i class="fas fa-paper-plane"></i></button>
+          </div>
+          <button class="ai-key-change-btn" id="aiKeyChange">Cambiar API key</button>
+        </div>
+      </div>
+
+    </div><!-- /ai-panel -->
+
+  </div><!-- /editor-body -->
+</div><!-- /app -->
+
+<!-- ── MODAL IMAGEN ──────────────────────────────────────────────────── -->
+<div class="modal-mask" id="imgModal">
+  <div class="modal-box">
+    <h4><i class="fas fa-image"></i> Insertar imagen</h4>
+    <div class="modal-tabs">
+      <button class="modal-tab active" onclick="switchImgTab('url', this)">URL</button>
+      <button class="modal-tab"        onclick="switchImgTab('file', this)">Archivo</button>
+    </div>
+    <div id="imgUrlSection">
+      <input class="modal-inp" id="imgUrlInput" type="url" placeholder="https://..."/>
+    </div>
+    <div id="imgFileSection" style="display:none">
+      <input class="modal-inp" id="imgFileInput" type="file" accept="image/*"
+             style="padding:.5rem; cursor:pointer;"/>
+    </div>
+    <input class="modal-inp" id="imgAltInput" type="text" placeholder="Texto alternativo (opcional)"/>
+    <div class="modal-footer">
+      <button class="modal-btn modal-btn-cancel" onclick="closeImgModal()">Cancelar</button>
+      <button class="modal-btn modal-btn-confirm" onclick="insertImg()"><i class="fas fa-check"></i> Insertar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL LINK ─────────────────────────────────────────────────────── -->
+<div class="modal-mask" id="linkModal">
+  <div class="modal-box">
+    <h4><i class="fas fa-link"></i> Insertar link</h4>
+    <input class="modal-inp" id="linkUrlInput"  type="url"  placeholder="https://..."/>
+    <input class="modal-inp" id="linkTextInput" type="text" placeholder="Texto del link (opcional)"/>
+    <div class="modal-footer">
+      <button class="modal-btn modal-btn-cancel"  onclick="closeLinkModal()">Cancelar</button>
+      <button class="modal-btn modal-btn-confirm" onclick="insertLnk()"><i class="fas fa-check"></i> Insertar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════════════
+const params   = new URLSearchParams(location.search);
+const noteId   = params.get('id') || ('note_' + Date.now());
+const editor   = document.getElementById('editorContent');
+const titleInp = document.getElementById('docTitle');
+const statusEl = document.getElementById('saveStatus');
+const wordsEl  = document.getElementById('wordCount');
+
+// Load saved note
+const saved = JSON.parse(localStorage.getItem('apunte_' + noteId) || 'null');
+if (saved) {
+  titleInp.value   = saved.title   || '';
+  editor.innerHTML = saved.content || '';
+  document.title   = (saved.title || 'Apunte') + ' — Portal Estudiantil';
+}
+
+// Enable CSS styling mode
+document.execCommand('styleWithCSS', false, true);
+editor.focus();
+
+// ══════════════════════════════════════════════════════════════════════
+//  SAVE
+// ══════════════════════════════════════════════════════════════════════
+let saveTimer = null;
+
+function saveNote() {
+  const data = { title: titleInp.value.trim(), content: editor.innerHTML };
+  localStorage.setItem('apunte_' + noteId, JSON.stringify(data));
+  statusEl.textContent = 'Guardado ✓';
+  document.title = (data.title || 'Apunte') + ' — Portal Estudiantil';
+  setTimeout(() => { statusEl.textContent = ''; }, 2500);
+}
+
+function scheduleSave() {
+  statusEl.textContent = 'Guardando…';
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveNote, 1000);
+}
+
+document.getElementById('btnSave').addEventListener('click', saveNote);
+editor.addEventListener('input', () => { updateWordCount(); scheduleSave(); updateState(); });
+titleInp.addEventListener('input', scheduleSave);
+window.addEventListener('beforeunload', saveNote);
+
+// Keyboard shortcuts
+editor.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey) {
+    if (e.key === 's') { e.preventDefault(); saveNote(); }
+    if (e.key === 'b') { e.preventDefault(); ec('bold'); }
+    if (e.key === 'i') { e.preventDefault(); ec('italic'); }
+    if (e.key === 'u') { e.preventDefault(); ec('underline'); }
+    if (e.key === 'z') { e.preventDefault(); ec('undo'); }
+    if (e.key === 'y') { e.preventDefault(); ec('redo'); }
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════
+//  EXEC COMMAND WRAPPER
+// ══════════════════════════════════════════════════════════════════════
+function ec(cmd, val) {
+  editor.focus();
+  document.execCommand(cmd, false, val || null);
+  updateState();
+  scheduleSave();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  FONT SIZE
+// ══════════════════════════════════════════════════════════════════════
+function applySize(pt) {
+  editor.focus();
+  document.execCommand('styleWithCSS', false, true);
+  document.execCommand('fontSize', false, '7');
+  editor.querySelectorAll('font[size="7"]').forEach(el => {
+    const span = document.createElement('span');
+    span.style.fontSize = pt + 'pt';
+    span.innerHTML = el.innerHTML;
+    el.replaceWith(span);
+  });
+  scheduleSave();
+}
+
+function changeSize(delta) {
+  const inp = document.getElementById('inpSize');
+  const val = Math.max(6, Math.min(96, parseInt(inp.value) + delta));
+  inp.value = val;
+  applySize(val);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  FORMAT BLOCK (headings, etc.)
+// ══════════════════════════════════════════════════════════════════════
+function applyFormat(tag) {
+  editor.focus();
+  document.execCommand('formatBlock', false, tag);
+  scheduleSave();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  LINE HEIGHT
+// ══════════════════════════════════════════════════════════════════════
+function setLineHeight(val) {
+  editor.style.lineHeight = val;
+  scheduleSave();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  TOOLBAR STATE SYNC (bold, italic, etc.)
+// ══════════════════════════════════════════════════════════════════════
+function updateState() {
+  const cmds = ['bold','italic','underline','strikeThrough',
+                'insertUnorderedList','insertOrderedList',
+                'justifyLeft','justifyCenter','justifyRight','justifyFull'];
+  const map = {
+    bold:'btn-bold', italic:'btn-italic', underline:'btn-under',
+    strikeThrough:'btn-strike',
+    insertUnorderedList:'btn-ul', insertOrderedList:'btn-ol',
+    justifyLeft:'btn-jl', justifyCenter:'btn-jc',
+    justifyRight:'btn-jr', justifyFull:'btn-jf',
+  };
+  cmds.forEach(cmd => {
+    const el = document.getElementById(map[cmd]);
+    if (el) el.classList.toggle('active', document.queryCommandState(cmd));
+  });
+}
+
+document.addEventListener('selectionchange', updateState);
+
+// ══════════════════════════════════════════════════════════════════════
+//  WORD COUNT
+// ══════════════════════════════════════════════════════════════════════
+function updateWordCount() {
+  const text  = editor.innerText.trim();
+  const words = text ? text.split(/\s+/).length : 0;
+  wordsEl.textContent = words + (words === 1 ? ' palabra' : ' palabras');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  INSERT TABLE
+// ══════════════════════════════════════════════════════════════════════
+function insertTable() {
+  editor.focus();
+  let html = '<table><tbody>';
+  for (let r = 0; r < 3; r++) {
+    html += '<tr>';
+    for (let c = 0; c < 3; c++) html += '<td>&nbsp;</td>';
+    html += '</tr>';
+  }
+  html += '</tbody></table><p><br></p>';
+  document.execCommand('insertHTML', false, html);
+  scheduleSave();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  PRINT
+// ══════════════════════════════════════════════════════════════════════
+function printDoc() { window.print(); }
+
+// ══════════════════════════════════════════════════════════════════════
+//  MODAL: IMAGEN
+// ══════════════════════════════════════════════════════════════════════
+let savedRange = null;
+
+function saveSelection() {
+  const sel = window.getSelection();
+  if (sel.rangeCount) savedRange = sel.getRangeAt(0).cloneRange();
+}
+function restoreSelection() {
+  if (!savedRange) return;
+  const sel = window.getSelection();
+  sel.removeAllRanges(); sel.addRange(savedRange);
+}
+
+let imgTabMode = 'url';
+
+function openImgModal() {
+  saveSelection();
+  document.getElementById('imgModal').classList.add('open');
+  document.getElementById('imgUrlInput').value  = '';
+  document.getElementById('imgAltInput').value  = '';
+  document.getElementById('imgFileInput').value = '';
+  setTimeout(() => document.getElementById('imgUrlInput').focus(), 120);
+}
+function closeImgModal() { document.getElementById('imgModal').classList.remove('open'); }
+
+function switchImgTab(mode, btn) {
+  imgTabMode = mode;
+  document.querySelectorAll('#imgModal .modal-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('imgUrlSection').style.display  = mode === 'url'  ? '' : 'none';
+  document.getElementById('imgFileSection').style.display = mode === 'file' ? '' : 'none';
+}
+
+function insertImg() {
+  const alt = document.getElementById('imgAltInput').value.trim();
+  if (imgTabMode === 'file') {
+    const file = document.getElementById('imgFileInput').files[0];
+    if (!file) { closeImgModal(); return; }
+    const reader = new FileReader();
+    reader.onload = e => {
+      restoreSelection();
+      editor.focus();
+      document.execCommand('insertImage', false, e.target.result);
+      // Set alt text
+      const imgs = editor.querySelectorAll('img:not([alt])');
+      if (alt && imgs.length) imgs[imgs.length-1].alt = alt;
+      scheduleSave();
+    };
+    reader.readAsDataURL(file);
+  } else {
+    const url = document.getElementById('imgUrlInput').value.trim();
+    if (!url) return;
+    restoreSelection();
+    editor.focus();
+    document.execCommand('insertImage', false, url);
+    if (alt) {
+      const imgs = editor.querySelectorAll('img[src="'+url+'"]');
+      if (imgs.length) imgs[imgs.length-1].alt = alt;
+    }
+    scheduleSave();
+  }
+  closeImgModal();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  MODAL: LINK
+// ══════════════════════════════════════════════════════════════════════
+function openLinkModal() {
+  saveSelection();
+  document.getElementById('linkModal').classList.add('open');
+  const sel  = window.getSelection();
+  document.getElementById('linkTextInput').value = sel ? sel.toString() : '';
+  document.getElementById('linkUrlInput').value  = '';
+  setTimeout(() => document.getElementById('linkUrlInput').focus(), 120);
+}
+function closeLinkModal() { document.getElementById('linkModal').classList.remove('open'); }
+
+function insertLnk() {
+  const url  = document.getElementById('linkUrlInput').value.trim();
+  const text = document.getElementById('linkTextInput').value.trim();
+  if (!url) { document.getElementById('linkUrlInput').focus(); return; }
+  restoreSelection();
+  editor.focus();
+  if (text) {
+    document.execCommand('insertHTML', false,
+      `<a href="${url}" target="_blank" rel="noopener">${text}</a>`);
+  } else {
+    document.execCommand('createLink', false, url);
+    const links = editor.querySelectorAll('a[href="'+url+'"]');
+    links.forEach(a => a.target = '_blank');
+  }
+  scheduleSave();
+  closeLinkModal();
+}
+
+// Close modals on mask click / Escape
+document.querySelectorAll('.modal-mask').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape')
+    document.querySelectorAll('.modal-mask.open').forEach(m => m.classList.remove('open'));
+});
+
+// ══════════════════════════════════════════════════════════════════════
+//  PANEL IA  (Groq — gratuito)
+// ══════════════════════════════════════════════════════════════════════
+const aiKeySection  = document.getElementById('aiKeySection');
+const aiChatSection = document.getElementById('aiChatSection');
+const aiKeyInput    = document.getElementById('aiKeyInput');
+const aiInput       = document.getElementById('aiInput');
+const aiSendBtn     = document.getElementById('aiSendBtn');
+const aiChatHistory = document.getElementById('aiChatHistory');
+const aiConvNameBar = document.getElementById('aiConvNameBar');
+const aiConvList    = document.getElementById('aiConvList');
+const aiHamMenu     = document.getElementById('aiHamMenu');
+
+// ── Key ──────────────────────────────────────────────────────────────
+let groqKey = localStorage.getItem('groq_api_key') || '';
+
+function aiShowChat() {
+  aiKeySection.style.display  = 'none';
+  aiChatSection.style.display = 'flex';
+  setTimeout(() => aiInput.focus(), 80);
+}
+function aiShowKey() {
+  aiKeySection.style.display  = '';
+  aiChatSection.style.display = 'none';
+  setTimeout(() => aiKeyInput.focus(), 80);
+}
+
+if (groqKey) aiShowChat(); else aiShowKey();
+
+document.getElementById('aiKeySave').addEventListener('click', () => {
+  const k = aiKeyInput.value.trim();
+  if (!k) { aiKeyInput.focus(); return; }
+  groqKey = k;
+  localStorage.setItem('groq_api_key', k);
+  aiKeyInput.value = '';
+  aiShowChat();
+});
+aiKeyInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('aiKeySave').click();
+});
+document.getElementById('aiKeyChange').addEventListener('click', () => {
+  groqKey = '';
+  localStorage.removeItem('groq_api_key');
+  aiShowKey();
+});
+
+// ── Conversaciones ───────────────────────────────────────────────────
+const CONV_KEY = 'ai_conversations';
+let conversations = [];
+let currentConvId = null;
+
+function loadConversations() {
+  try { conversations = JSON.parse(localStorage.getItem(CONV_KEY) || '[]'); } catch { conversations = []; }
+}
+function saveConversations() {
+  localStorage.setItem(CONV_KEY, JSON.stringify(conversations));
+}
+function currentConv() {
+  return conversations.find(c => c.id === currentConvId) || null;
+}
+
+function renderConvList() {
+  aiConvList.innerHTML = '';
+  [...conversations].reverse().forEach(conv => {
+    const btn = document.createElement('button');
+    btn.className = 'ai-conv-btn' + (conv.id === currentConvId ? ' active' : '');
+    btn.innerHTML = `<i class="fas fa-comment-dots"></i><span>${conv.name}</span>`;
+    btn.addEventListener('click', () => { loadConv(conv.id); aiHamMenu.classList.remove('open'); });
+    aiConvList.appendChild(btn);
+  });
+}
+
+function loadConv(id) {
+  currentConvId = id;
+  const conv = currentConv();
+  if (!conv) return;
+  aiConvNameBar.textContent = conv.name;
+  aiChatHistory.innerHTML   = '';
+  conv.messages.forEach(m => addAiBubble(m.content, m.role, false));
+  renderConvList();
+}
+
+function newConversation() {
+  const id   = 'conv_' + Date.now();
+  const conv = { id, name: 'Nueva conversación', messages: [] };
+  conversations.push(conv);
+  saveConversations();
+  loadConv(id);
+}
+
+// Inicializar: cargar última conv o crear una
+loadConversations();
+if (conversations.length > 0) {
+  loadConv(conversations[conversations.length - 1].id);
+} else {
+  newConversation();
+}
+
+// ── Hamburger menu ───────────────────────────────────────────────────
+document.getElementById('aiHamBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  renderConvList();
+  aiHamMenu.classList.toggle('open');
+});
+document.addEventListener('click', e => {
+  if (!document.getElementById('aiHamMenu').contains(e.target) &&
+      e.target !== document.getElementById('aiHamBtn'))
+    aiHamMenu.classList.remove('open');
+});
+document.getElementById('aiNewConvBtn').addEventListener('click', () => {
+  newConversation();
+  aiHamMenu.classList.remove('open');
+});
+
+// ── Auto-nombre de conversación ──────────────────────────────────────
+async function autoNameConv(conv) {
+  if (!groqKey || conv.name !== 'Nueva conversación' || conv.messages.length < 2) return;
+  try {
+    const excerpt = conv.messages.slice(0, 3).map(m => `${m.role}: ${m.content}`).join('\n');
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + groqKey },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: 'Generá un título de máximo 5 palabras en español para esta conversación. Respondé ÚNICAMENTE el título, sin comillas ni puntuación extra.' },
+          { role: 'user',   content: excerpt },
+        ],
+        max_tokens: 20,
+      }),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const name = data.choices?.[0]?.message?.content?.trim().replace(/^["']|["']$/g, '');
+    if (name) {
+      conv.name = name;
+      saveConversations();
+      aiConvNameBar.textContent = name;
+      renderConvList();
+    }
+  } catch {}
+}
+
+// ── Chat ─────────────────────────────────────────────────────────────
+function addAiBubble(text, role, scroll = true) {
+  const div = document.createElement('div');
+  div.className = 'ai-bubble ' + (role === 'user' ? 'ai-bubble-user' : 'ai-bubble-bot');
+  div.textContent = text;
+  aiChatHistory.appendChild(div);
+  if (scroll) aiChatHistory.scrollTop = aiChatHistory.scrollHeight;
+  return div;
+}
+
+aiInput.addEventListener('input', () => {
+  aiInput.style.height = 'auto';
+  aiInput.style.height = Math.min(aiInput.scrollHeight, 100) + 'px';
+});
+aiInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAiMessage(); }
+});
+aiSendBtn.addEventListener('click', sendAiMessage);
+
+function getPortalContext() {
+  const lines  = [];
+  const images = []; // { label, dataUrl }
+  try {
+    // ── Materias ────────────────────────────────────────────────────
+    const materias = JSON.parse(localStorage.getItem('materias') || '[]');
+    lines.push(`=== MATERIAS (${materias.length}) ===`);
+    lines.push(materias.length ? materias.map((m,i) => `  ${i+1}. ${m}`).join('\n') : '  (ninguna cargada)');
+
+    // ── Tareas ──────────────────────────────────────────────────────
+    const tareas = JSON.parse(localStorage.getItem('portal_tareas') || '[]');
+    lines.push(`\n=== TAREAS (${tareas.length} total) ===`);
+    if (tareas.length) {
+      tareas.forEach((t, i) => {
+        let line = `  ${i+1}. [${t.completada ? 'COMPLETADA' : 'PENDIENTE'}] "${t.nombre}" | Materia: ${t.materia} | Vence: ${t.vence}`;
+        if (t.url)           line += ` | URL: ${t.url}`;
+        if (t.archivoNombre) line += ` | Archivo adjunto: ${t.archivoNombre}`;
+        if (t.archivoEsImagen && t.id) {
+          const dataUrl = localStorage.getItem('portal_archivo_' + t.id);
+          if (dataUrl) {
+            line += ` | [IMAGEN ADJUNTA — ver abajo]`;
+            images.push({ label: `Imagen adjunta a tarea "${t.nombre}"`, dataUrl });
+          }
+        }
+        lines.push(line);
+      });
+    } else {
+      lines.push('  (ninguna cargada — las tareas se guardan automáticamente al crearlas en el portal)');
+    }
+
+    // ── Exámenes ────────────────────────────────────────────────────
+    const examenes = JSON.parse(localStorage.getItem('portal_examenes') || '[]');
+    lines.push(`\n=== EXÁMENES (${examenes.length} total) ===`);
+    if (examenes.length) {
+      examenes.forEach((e, i) => {
+        let line = `  ${i+1}. "${e.tema}" | Materia: ${e.materia} | Fecha: ${e.vence}`;
+        (e.links || []).forEach(l => { line += ` | Link: ${l.url}`; });
+        lines.push(line);
+      });
+    } else {
+      lines.push('  (ninguno cargado)');
+    }
+
+    // ── Apuntes por materia (con contenido de apuntes propios) ──────
+    const apuntes = JSON.parse(localStorage.getItem('portal_apuntes') || '{}');
+    const apuntesMaterias = Object.keys(apuntes);
+    lines.push(`\n=== APUNTES (${apuntesMaterias.length} materias con apuntes) ===`);
+    if (apuntesMaterias.length) {
+      apuntesMaterias.forEach(mat => {
+        const items = apuntes[mat];
+        if (!items?.length) return;
+        lines.push(`  Materia: ${mat}`);
+        items.forEach((a, j) => {
+          if (a.tipo === 'nota' && a.noteId) {
+            try {
+              const noteData  = JSON.parse(localStorage.getItem('apunte_' + a.noteId) || '{}');
+              const titulo    = noteData.title || a.nombre || 'Sin título';
+              const contenido = (noteData.content || '').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0, 600);
+              lines.push(`    ${j+1}. [Apunte propio] "${titulo}"${contenido ? ': ' + contenido + (contenido.length >= 600 ? '…' : '') : ' (vacío)'}`);
+            } catch { lines.push(`    ${j+1}. [Apunte propio] "${a.nombre}"`); }
+          } else if (a.tipo === 'gdoc') {
+            lines.push(`    ${j+1}. [Google Doc] "${a.nombre}" | URL: ${a.url}`);
+          } else {
+            lines.push(`    ${j+1}. [URL] "${a.nombre}" | URL: ${a.url}`);
+          }
+        });
+      });
+    } else {
+      lines.push('  (ninguno cargado)');
+    }
+
+    // ── Conversaciones anteriores con la IA ─────────────────────────
+    const convs = JSON.parse(localStorage.getItem('ai_conversations') || '[]');
+    const otras = convs.filter(c => c.id !== currentConvId && c.messages.length > 0);
+    if (otras.length) {
+      lines.push(`\n=== CONVERSACIONES ANTERIORES CON LA IA (${otras.length}) ===`);
+      otras.slice(-5).forEach((c, i) => {
+        lines.push(`  ${i+1}. "${c.name}" (${c.messages.length} mensajes)`);
+        const last = c.messages[c.messages.length - 1];
+        if (last) lines.push(`     Último (${last.role}): ${last.content.slice(0, 150)}…`);
+      });
+    }
+
+  } catch(err) {}
+  return { text: lines.join('\n'), images };
+}
+
+async function sendAiMessage() {
+  const text = aiInput.value.trim();
+  if (!text || !groqKey) return;
+  if (!currentConvId) newConversation();
+
+  aiInput.value = '';
+  aiInput.style.height = 'auto';
+  aiSendBtn.disabled = true;
+
+  const conv = currentConv();
+  conv.messages.push({ role: 'user', content: text });
+  addAiBubble(text, 'user');
+
+  const noteText         = editor.innerText.trim().slice(0, 1200);
+  const { text: portalCtxText, images: portalImages } = getPortalContext();
+  const hasImages        = portalImages.length > 0;
+
+  const systemCtx = `Sos un asistente de estudio integrado en el Portal Estudiantil. Tenés acceso COMPLETO y en tiempo real a todos los datos del portal del usuario. A continuación están TODOS los datos actuales:
+
+${portalCtxText}
+${noteText ? `\n=== APUNTE ACTUAL QUE ESTÁ ESCRIBIENDO ===\n${noteText}` : ''}
+
+INSTRUCCIONES:
+- Los datos de arriba son reales y actuales — úsalos directamente en tus respuestas.
+- Si el usuario pregunta por una tarea, buscala en la lista de TAREAS y respondé sobre ella.
+- Si te piden "resolver" una tarea, analizá el contenido (incluyendo las imágenes adjuntas si las hay) y desarrollá la respuesta completa.
+- Nunca digas que no tenés acceso a datos — ya los tenés todos arriba.
+- Si una sección dice "(ninguna cargada)" es porque el usuario no cargó datos ahí todavía.
+- Respondé siempre en español, directo al punto.`;
+
+  // Construir el mensaje del usuario — con imágenes si las hay
+  const userContent = hasImages
+    ? [
+        { type: 'text', text },
+        ...portalImages.map(img => ({
+          type: 'image_url',
+          image_url: { url: img.dataUrl }
+        }))
+      ]
+    : text;
+
+  // Modelo: visión si hay imágenes, texto si no
+  const model = hasImages ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.3-70b-versatile';
+
+  const thinkingBubble = addAiBubble('Pensando…', 'bot');
+  thinkingBubble.classList.add('thinking');
+
+  // Historial previo como texto (los últimos 10 sin contar el mensaje actual)
+  const history = conv.messages.slice(-11, -1).map(m => ({ role: m.role, content: m.content }));
+
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + groqKey },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: systemCtx },
+          ...history,
+          { role: 'user', content: userContent },
+        ],
+        max_tokens: 800,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || `HTTP ${res.status}`);
+    }
+
+    const data  = await res.json();
+    const reply = data.choices?.[0]?.message?.content || '(sin respuesta)';
+    thinkingBubble.classList.remove('thinking');
+    thinkingBubble.textContent = reply;
+
+    conv.messages.push({ role: 'assistant', content: reply });
+    saveConversations();
+    autoNameConv(conv);   // nombra la conv en background
+
+  } catch (err) {
+    thinkingBubble.classList.remove('thinking');
+    thinkingBubble.textContent = '⚠ ' + err.message;
+  } finally {
+    aiSendBtn.disabled = false;
+    aiInput.focus();
+  }
+}
+
+// Initial word count
+updateWordCount();
+updateState();
+</script>
+</body>
+</html>
