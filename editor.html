@@ -200,40 +200,41 @@ html, body {
 .canvas::-webkit-scrollbar-track { background:var(--bg); }
 .canvas::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
 
-/* DOCUMENT PAGE */
-.doc-page {
-  background:#fff;
-  color:#1a1a1a;
-  width:794px;
-  min-height:1123px;
-  padding:72px 80px 80px;
-  border-radius:0;
-  box-shadow:0 0 40px rgba(0,0,0,.45);
-  flex-shrink:0;
-  position:relative;
+/* DOCUMENT WRAPPER (hojas) */
+#docWrapper {
+  background: #fff;
+  color: #1a1a1a;
+  width: 794px;
+  min-height: 1123px;
+  padding: 72px 80px 80px;
+  box-shadow: 0 0 40px rgba(0,0,0,.45);
+  flex-shrink: 0;
+  position: relative;
 }
 
-/* Separador visual entre páginas */
-.page-break-bar {
+/* Líneas de separación entre páginas */
+#pageLines {
   position: absolute;
-  left: -60px; right: -60px;
-  height: 28px;
-  background: var(--bg);
+  top: 0; left: 0; right: 0; bottom: 0;
   pointer-events: none;
-  z-index: 4;
-  display: flex; align-items: center; justify-content: center;
+  z-index: 2;
 }
-.page-break-bar::before,
-.page-break-bar::after {
-  content: '';
+.page-break-line {
   position: absolute;
-  left: 0; right: 0; height: 5px;
+  left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(to right, transparent, rgba(0,0,0,.10) 10%, rgba(0,0,0,.10) 90%, transparent);
+  box-shadow: 0 1px 6px rgba(0,0,0,.13), 0 -1px 6px rgba(0,0,0,.10);
 }
-.page-break-bar::before { top: 0;    background: linear-gradient(to bottom, rgba(0,0,0,.18), transparent); }
-.page-break-bar::after  { bottom: 0; background: linear-gradient(to top,   rgba(0,0,0,.18), transparent); }
-.page-break-label {
-  font-size: .6rem; color: #aaa; letter-spacing: .08em;
-  text-transform: uppercase; user-select: none;
+.page-break-num {
+  position: absolute;
+  right: -56px;
+  transform: translateY(-50%);
+  font-size: .65rem;
+  color: #aaa;
+  user-select: none;
+  white-space: nowrap;
+  font-family: Arial, sans-serif;
 }
 
 /* Editor content */
@@ -459,7 +460,7 @@ html, body {
 .modal-tab.active { background:rgba(108,99,255,.2); color:var(--accent); }
 
 @media (max-width:900px) {
-  .doc-page { width:100%; padding:2rem 1.5rem; }
+  #docWrapper { width:100%; padding:2rem 1.5rem; }
   .sidebar  { width:200px; }
 }
 </style>
@@ -620,7 +621,8 @@ html, body {
 
     <!-- ── CANVAS ───────────────────────────────────────────────────── -->
     <main class="canvas" id="canvas">
-      <div class="doc-page">
+      <div id="docWrapper">
+        <div id="pageLines"></div>
         <div id="editorContent"
              contenteditable="true"
              spellcheck="true"
@@ -719,6 +721,7 @@ if (saved) {
 // Enable CSS styling mode
 document.execCommand('styleWithCSS', false, true);
 editor.focus();
+updatePageLines();
 
 // ══════════════════════════════════════════════════════════════════════
 //  SAVE
@@ -739,8 +742,40 @@ function scheduleSave() {
   saveTimer = setTimeout(saveNote, 1000);
 }
 
+// ── Paginación automática ─────────────────────────────────────────────
+const PAGE_H    = 1123; // altura A4 en px
+const PAD_TOP   = 72;
+const PAD_BOT   = 80;
+
+function updatePageLines() {
+  const wrapper    = document.getElementById('docWrapper');
+  const container  = document.getElementById('pageLines');
+  const wrapperH   = PAD_TOP + editor.scrollHeight + PAD_BOT;
+  const totalPages = Math.ceil(wrapperH / PAGE_H);
+
+  // Asegurar que el wrapper siempre termine en hoja completa
+  wrapper.style.minHeight = (totalPages * PAGE_H) + 'px';
+
+  // Redibujar líneas
+  container.innerHTML = '';
+  for (let i = 1; i < totalPages; i++) {
+    const y = i * PAGE_H;
+
+    const line = document.createElement('div');
+    line.className = 'page-break-line';
+    line.style.top = y + 'px';
+    container.appendChild(line);
+
+    const label = document.createElement('span');
+    label.className = 'page-break-num';
+    label.style.top  = y + 'px';
+    label.textContent = 'Página ' + (i + 1);
+    container.appendChild(label);
+  }
+}
+
 document.getElementById('btnSave').addEventListener('click', saveNote);
-editor.addEventListener('input', () => { updateWordCount(); scheduleSave(); updateState(); });
+editor.addEventListener('input', () => { updateWordCount(); scheduleSave(); updateState(); updatePageLines(); });
 titleInp.addEventListener('input', scheduleSave);
 window.addEventListener('beforeunload', saveNote);
 
