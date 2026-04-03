@@ -177,8 +177,10 @@ body {
 .hero-ia-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: .55rem;
-  padding: .6rem 1.6rem;
+  padding: .65rem 2rem;
+  min-width: 340px;
   background: rgba(108,99,255,.18);
   border: 1.5px solid rgba(108,99,255,.45);
   border-radius: 999px;
