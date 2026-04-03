@@ -534,6 +534,11 @@ document.getElementById('ctxApunteDelete').addEventListener('click', () => {
   const row = ctxApunteTarget.closest('.apunte-row');
   ctxApunteTarget.remove();
   if (row) {
+    // Eliminar etiquetas de categoría que quedaron sin ítems
+    row.querySelectorAll('.apunte-cat-label').forEach(lbl => {
+      const next = lbl.nextElementSibling;
+      if (!next || next.classList.contains('apunte-cat-label')) lbl.remove();
+    });
     const count = row.querySelectorAll('.apunte-items-list .apunte-item').length;
     row.querySelector('.apunte-row-badge').textContent = count > 0 ? `${count} apunte${count > 1 ? 's' : ''}` : '0 apuntes';
     const emptyMsg = row.querySelector('.apunte-body-empty');
