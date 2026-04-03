@@ -532,8 +532,7 @@ html, body {
         <div class="sb-size-row">
           <input class="tb-size-input" id="inpSize" type="number" value="11" min="6" max="96"
                  title="Tamaño de fuente (pt)"
-                 onkeydown="if(event.key==='Enter'){event.preventDefault();applySize(this.value);editor.focus();}"
-                 onblur="applySize(this.value)"/>
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();applySize(this.value);}"/>
           <button class="tb-btn" title="Reducir tamaño" onclick="changeSize(-1)"><i class="fas fa-minus"></i></button>
           <button class="tb-btn" title="Aumentar tamaño" onclick="changeSize(1)"><i class="fas fa-plus"></i></button>
         </div>
@@ -846,16 +845,17 @@ function ec(cmd, val) {
 // ══════════════════════════════════════════════════════════════════════
 //  FONT SIZE
 // ══════════════════════════════════════════════════════════════════════
+editor.addEventListener('blur', saveSelection);
+
 function applySize(pt) {
   pt = parseInt(pt);
   if (!pt || pt < 6 || pt > 96) return;
-  editor.focus();
+  restoreSelection();
   document.execCommand('fontSize', false, '7');
   editor.querySelectorAll('font[size="7"]').forEach(el => {
     const span = document.createElement('span');
     span.style.fontSize = pt + 'pt';
     span.innerHTML = el.innerHTML;
-    // Eliminar font-size anidados para que no se acumulen
     span.querySelectorAll('[style]').forEach(child => {
       child.style.removeProperty('font-size');
       if (!child.getAttribute('style').trim()) child.removeAttribute('style');
