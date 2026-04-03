@@ -851,7 +851,10 @@ function applySize(pt) {
   pt = parseInt(pt);
   if (!pt || pt < 6 || pt > 96) return;
   restoreSelection();
+  // Desactivar styleWithCSS para que fontSize genere <font size="7"> y no un span CSS
+  document.execCommand('styleWithCSS', false, false);
   document.execCommand('fontSize', false, '7');
+  document.execCommand('styleWithCSS', false, true);
   editor.querySelectorAll('font[size="7"]').forEach(el => {
     const span = document.createElement('span');
     span.style.fontSize = pt + 'pt';
