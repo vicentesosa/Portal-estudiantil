@@ -202,15 +202,23 @@ html, body {
 
 /* DOCUMENT WRAPPER (hojas) */
 #docWrapper {
-  background: #fff;
-  color: #1a1a1a;
-  width: 794px;
-  min-height: 1123px;
-  padding: 72px 80px 80px;
-  box-shadow: 0 0 40px rgba(0,0,0,.45);
-  flex-shrink: 0;
   position: relative;
+  width: 794px;
+  flex-shrink: 0;
 }
+#pagesBg {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.page-sheet {
+  position: absolute;
+  left: 0; width: 794px; height: 1123px;
+  background: #fff;
+  box-shadow: 0 0 40px rgba(0,0,0,.45);
+}
+
 
 /* Separadores entre páginas */
 #pageLines {
@@ -234,13 +242,17 @@ html, body {
 
 /* Editor content */
 #editorContent {
+  position: relative;
+  z-index: 1;
   outline:none;
-  min-height:900px;
+  min-height:979px;
+  padding:72px 80px 72px;
   font-family:Arial, sans-serif;
   font-size:11pt;
   line-height:1.65;
   color:#1a1a1a;
   word-break:break-word;
+  background:transparent;
 }
 #editorContent:empty::before {
   content:attr(data-placeholder);
@@ -463,7 +475,8 @@ html, body {
 .modal-tab.active { background:rgba(108,99,255,.2); color:var(--accent); }
 
 @media (max-width:900px) {
-  #docWrapper { width:100%; padding:2rem 1.5rem; }
+  #docWrapper { width:100%; }
+  .page-sheet  { width:100%; }
   .sidebar  { width:200px; }
 }
 </style>
@@ -625,6 +638,7 @@ html, body {
     <!-- ── CANVAS ───────────────────────────────────────────────────── -->
     <main class="canvas" id="canvas">
       <div id="docWrapper">
+        <div id="pagesBg"></div>
         <div id="pageLines"></div>
         <div id="editorContent"
              contenteditable="true"
@@ -752,37 +766,34 @@ const PAD_TOP = 72;
 const PAD_BOT = 80;
 
 function updatePageLines() {
-  const wrapper   = document.getElementById('docWrapper');
-  const container = document.getElementById('pageLines');
-  const contentH  = PAD_TOP + editor.scrollHeight + PAD_BOT;
-  const totalPages = Math.max(1, Math.ceil(contentH / PAGE_H));
+  const wrapper    = document.getElementById('docWrapper');
+  const bg         = document.getElementById('pagesBg');
+  const container  = document.getElementById('pageLines');
+  const totalPages = Math.max(1, Math.ceil(editor.scrollHeight / PAGE_H));
   const totalH     = totalPages * PAGE_H + (totalPages - 1) * GAP_H;
 
   wrapper.style.minHeight = totalH + 'px';
 
-  // Gradiente que alterna páginas blancas y espacios oscuros
-  const stops = [];
-  let y = 0;
-  for (let i = 0; i < totalPages; i++) {
-    if (i > 0) {
-      stops.push(`#0f1117 ${y}px`, `#0f1117 ${y + GAP_H}px`);
-      y += GAP_H;
-    }
-    stops.push(`#fff ${y}px`, `#fff ${y + PAGE_H}px`);
-    y += PAGE_H;
+  // Agregar o quitar hojas individuales
+  while (bg.children.length < totalPages) {
+    bg.appendChild(document.createElement('div')).className = 'page-sheet';
   }
-  wrapper.style.backgroundImage = `linear-gradient(to bottom,${stops.join(',')})`;
+  while (bg.children.length > totalPages) bg.lastChild.remove();
 
-  // Etiquetas de página en el espacio oscuro
+  // Posicionar cada hoja
+  Array.from(bg.children).forEach((sheet, i) => {
+    sheet.style.top = (i * (PAGE_H + GAP_H)) + 'px';
+  });
+
+  // Etiquetas en el espacio oscuro entre hojas
   container.innerHTML = '';
-  let gapY = PAGE_H;
   for (let i = 1; i < totalPages; i++) {
-    const label = document.createElement('span');
-    label.className = 'page-break-num';
-    label.style.top = (gapY + GAP_H / 2) + 'px';
-    label.textContent = '— Página ' + (i + 1) + ' —';
+    const gapTop = i * PAGE_H + (i - 1) * GAP_H;
+    const label  = document.createElement('span');
+    label.className    = 'page-break-num';
+    label.style.top    = (gapTop + GAP_H / 2) + 'px';
+    label.textContent  = '— Página ' + (i + 1) + ' —';
     container.appendChild(label);
-    gapY += PAGE_H + GAP_H;
   }
 }
 
