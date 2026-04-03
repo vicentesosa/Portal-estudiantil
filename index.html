@@ -65,9 +65,15 @@
           <span class="badge badge-success"><i class="fas fa-star"></i> Sin proyectos activos</span>
         </div>
       </div>
-      <a href="editor.html" class="hero-ia-btn" target="_blank" rel="noopener">
-        <i class="fas fa-robot"></i> Preguntar a la IA
-      </a>
+      <div class="hero-ia-wrap" id="heroIaWrap">
+        <button class="hero-ia-btn" id="heroIaBtn">
+          <i class="fas fa-robot"></i> Preguntar a la IA
+        </button>
+        <div class="hero-ia-input-row" id="heroIaInputRow">
+          <input class="hero-ia-input" id="heroIaInput" type="text" placeholder="Escribí tu pregunta..."/>
+          <button class="hero-ia-send" id="heroIaSend"><i class="fas fa-paper-plane"></i></button>
+        </div>
+      </div>
     </div>
 
     <!-- Stats rápidos -->
@@ -559,5 +565,31 @@
   </div>
 
   <script src="app.js"></script>
+  <script>
+    const heroWrap  = document.getElementById('heroIaWrap');
+    const heroBtn   = document.getElementById('heroIaBtn');
+    const heroInput = document.getElementById('heroIaInput');
+    const heroSend  = document.getElementById('heroIaSend');
+
+    function abrirIa() {
+      heroWrap.classList.add('open');
+      setTimeout(() => heroInput.focus(), 60);
+    }
+
+    function enviarPregunta() {
+      const q = heroInput.value.trim();
+      if (!q) return;
+      window.open('editor.html?q=' + encodeURIComponent(q), '_blank', 'noopener');
+      heroInput.value = '';
+      heroWrap.classList.remove('open');
+    }
+
+    heroBtn.addEventListener('click', abrirIa);
+    heroSend.addEventListener('click', enviarPregunta);
+    heroInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') enviarPregunta();
+      if (e.key === 'Escape') heroWrap.classList.remove('open');
+    });
+  </script>
 </body>
 </html>

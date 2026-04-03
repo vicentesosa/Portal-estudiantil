@@ -1501,6 +1501,15 @@ INSTRUCCIONES:
 // Initial word count
 updateWordCount();
 updateState();
+
+// Auto-enviar pregunta si viene del botón del inicio
+const paramQ = new URLSearchParams(location.search).get('q');
+if (paramQ) {
+  setTimeout(() => {
+    aiInput.value = paramQ;
+    sendAiMessage();
+  }, 800);
+}
 </script>
 
 </body>

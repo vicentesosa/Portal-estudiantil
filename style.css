@@ -174,31 +174,68 @@ body {
   justify-content: space-between;
   gap: 1.5rem;
 }
+.hero-ia-wrap {
+  min-width: 480px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
 .hero-ia-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: .55rem;
   padding: .65rem 2rem;
-  min-width: 480px;
+  width: 100%;
   background: rgba(108,99,255,.18);
   border: 1.5px solid rgba(108,99,255,.45);
   border-radius: 999px;
   color: #c4c0ff;
   font-size: .9rem;
   font-weight: 700;
-  text-decoration: none;
+  cursor: pointer;
   white-space: nowrap;
-  flex-shrink: 0;
   transition: background .18s, border-color .18s, color .18s;
-  position: relative;
-  z-index: 1;
 }
 .hero-ia-btn:hover {
   background: rgba(108,99,255,.35);
   border-color: rgba(108,99,255,.8);
   color: #fff;
 }
+.hero-ia-input-row {
+  display: none;
+  align-items: center;
+  background: rgba(108,99,255,.13);
+  border: 1.5px solid rgba(108,99,255,.6);
+  border-radius: 999px;
+  padding: .3rem .3rem .3rem 1.2rem;
+  gap: .4rem;
+}
+.hero-ia-wrap.open .hero-ia-btn       { display: none; }
+.hero-ia-wrap.open .hero-ia-input-row { display: flex; }
+.hero-ia-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-size: .9rem;
+  min-width: 0;
+}
+.hero-ia-input::placeholder { color: rgba(196,192,255,.55); }
+.hero-ia-send {
+  background: rgba(108,99,255,.7);
+  border: none;
+  border-radius: 999px;
+  color: #fff;
+  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  font-size: .88rem;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+.hero-ia-send:hover { background: rgba(108,99,255,1); }
 .inicio-hero::after {
   content: '';
   position: absolute;
