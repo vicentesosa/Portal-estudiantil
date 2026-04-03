@@ -531,7 +531,9 @@ html, body {
         <!-- Tamaño -->
         <div class="sb-size-row">
           <input class="tb-size-input" id="inpSize" type="number" value="11" min="6" max="96"
-                 title="Tamaño de fuente (pt)" oninput="applySize(this.value)" onchange="applySize(this.value)"/>
+                 title="Tamaño de fuente (pt)"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();applySize(this.value);editor.focus();}"
+                 onblur="applySize(this.value)"/>
           <button class="tb-btn" title="Reducir tamaño" onclick="changeSize(-1)"><i class="fas fa-minus"></i></button>
           <button class="tb-btn" title="Aumentar tamaño" onclick="changeSize(1)"><i class="fas fa-plus"></i></button>
         </div>
@@ -845,13 +847,19 @@ function ec(cmd, val) {
 //  FONT SIZE
 // ══════════════════════════════════════════════════════════════════════
 function applySize(pt) {
+  pt = parseInt(pt);
+  if (!pt || pt < 6 || pt > 96) return;
   editor.focus();
-  document.execCommand('styleWithCSS', false, true);
   document.execCommand('fontSize', false, '7');
   editor.querySelectorAll('font[size="7"]').forEach(el => {
     const span = document.createElement('span');
     span.style.fontSize = pt + 'pt';
     span.innerHTML = el.innerHTML;
+    // Eliminar font-size anidados para que no se acumulen
+    span.querySelectorAll('[style]').forEach(child => {
+      child.style.removeProperty('font-size');
+      if (!child.getAttribute('style').trim()) child.removeAttribute('style');
+    });
     el.replaceWith(span);
   });
   scheduleSave();
@@ -859,7 +867,7 @@ function applySize(pt) {
 
 function changeSize(delta) {
   const inp = document.getElementById('inpSize');
-  const val = Math.max(6, Math.min(96, parseInt(inp.value) + delta));
+  const val = Math.max(6, Math.min(96, parseInt(inp.value || 11) + delta));
   inp.value = val;
   applySize(val);
 }
@@ -899,6 +907,21 @@ function updateState() {
     const el = document.getElementById(map[cmd]);
     if (el) el.classList.toggle('active', document.queryCommandState(cmd));
   });
+
+  // Mostrar tamaño actual en el input
+  const inp = document.getElementById('inpSize');
+  if (inp && !inp.matches(':focus')) {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      const node = sel.anchorNode;
+      const el   = node ? (node.nodeType === 3 ? node.parentElement : node) : null;
+      if (el && editor.contains(el)) {
+        const pxStr = window.getComputedStyle(el).fontSize;
+        const px    = parseFloat(pxStr);
+        if (px) inp.value = Math.round(px * 0.75); // px → pt
+      }
+    }
+  }
 }
 
 document.addEventListener('selectionchange', updateState);
