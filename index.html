@@ -6,8 +6,40 @@
   <title>Portal Estudiantil</title>
   <link rel="stylesheet" href="style.css"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+
+  <!-- ========== AUTH OVERLAY ========== -->
+  <div class="auth-overlay" id="authOverlay">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <i class="fas fa-graduation-cap"></i>
+        <span>Portal Estudiantil</span>
+      </div>
+
+      <!-- LOGIN -->
+      <div id="authLoginPanel">
+        <h2 class="auth-title">Iniciar sesión</h2>
+        <input class="auth-input" id="loginEmail" type="email" placeholder="Email" autocomplete="email"/>
+        <input class="auth-input" id="loginPass"  type="password" placeholder="Contraseña" autocomplete="current-password"/>
+        <button class="auth-btn" id="loginBtn">Entrar</button>
+        <p class="auth-error" id="loginError"></p>
+        <p class="auth-switch">¿No tenés cuenta? <a href="#" id="switchToReg">Registrate</a></p>
+      </div>
+
+      <!-- REGISTRO -->
+      <div id="authRegPanel" style="display:none">
+        <h2 class="auth-title">Crear cuenta</h2>
+        <input class="auth-input" id="regEmail"  type="email"    placeholder="Email" autocomplete="email"/>
+        <input class="auth-input" id="regPass"   type="password" placeholder="Contraseña (mín. 6 caracteres)"/>
+        <input class="auth-input" id="regPass2"  type="password" placeholder="Confirmar contraseña"/>
+        <button class="auth-btn" id="regBtn">Crear cuenta</button>
+        <p class="auth-error" id="regError"></p>
+        <p class="auth-switch">¿Ya tenés cuenta? <a href="#" id="switchToLogin">Iniciá sesión</a></p>
+      </div>
+    </div>
+  </div>
 
   <!-- ========== HEADER ========== -->
   <header class="header">
@@ -43,9 +75,12 @@
     <div class="user-info">
       <i class="fas fa-user-circle user-avatar"></i>
       <div class="user-text">
-        <span class="user-name">Estudiante</span>
+        <span class="user-name" id="userEmailSpan">Estudiante</span>
         <span class="user-grade">5° Año</span>
       </div>
+      <button class="logout-btn" id="logoutBtn" style="display:none" title="Cerrar sesión">
+        <i class="fas fa-sign-out-alt"></i>
+      </button>
     </div>
   </header>
 
@@ -103,7 +138,7 @@
         <div class="qnav-icon"><i class="fas fa-book"></i></div>
         <div class="qnav-text">
           <h3>Materias</h3>
-          <p>6 materias activas este cuatrimestre</p>
+          <p id="qnavMaterias">Sin materias registradas</p>
         </div>
         <i class="fas fa-arrow-right qnav-arrow"></i>
       </button>
@@ -111,7 +146,23 @@
         <div class="qnav-icon"><i class="fas fa-tasks"></i></div>
         <div class="qnav-text">
           <h3>Tareas</h3>
-          <p>Sin tareas pendientes</p>
+          <p id="qnavTareas">Sin tareas pendientes</p>
+        </div>
+        <i class="fas fa-arrow-right qnav-arrow"></i>
+      </button>
+      <button class="qnav-btn" data-goto="apuntes" style="--c:#16a085">
+        <div class="qnav-icon"><i class="fas fa-sticky-note"></i></div>
+        <div class="qnav-text">
+          <h3>Apuntes</h3>
+          <p id="qnavApuntes">Sin apuntes guardados</p>
+        </div>
+        <i class="fas fa-arrow-right qnav-arrow"></i>
+      </button>
+      <button class="qnav-btn" data-goto="examenes" style="--c:#8e44ad">
+        <div class="qnav-icon"><i class="fas fa-file-alt"></i></div>
+        <div class="qnav-text">
+          <h3>Exámenes</h3>
+          <p id="qnavExamenes">Sin exámenes registrados</p>
         </div>
         <i class="fas fa-arrow-right qnav-arrow"></i>
       </button>
@@ -119,7 +170,7 @@
         <div class="qnav-icon"><i class="fas fa-project-diagram"></i></div>
         <div class="qnav-text">
           <h3>Proyectos</h3>
-          <p>Sin proyectos activos por el momento</p>
+          <p id="qnavProyectos">Sin proyectos activos</p>
         </div>
         <i class="fas fa-arrow-right qnav-arrow"></i>
       </button>
@@ -127,7 +178,7 @@
         <div class="qnav-icon"><i class="fas fa-calendar-alt"></i></div>
         <div class="qnav-text">
           <h3>Calendario</h3>
-          <p>Sin eventos próximos agendados</p>
+          <p id="qnavCalendario">Sin eventos próximos</p>
         </div>
         <i class="fas fa-arrow-right qnav-arrow"></i>
       </button>
@@ -564,34 +615,253 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
-  <script>
-    const heroWrap  = document.getElementById('heroIaWrap');
-    const heroBtn   = document.getElementById('heroIaBtn');
-    const heroInput = document.getElementById('heroIaInput');
-    const heroSend  = document.getElementById('heroIaSend');
+  <!-- ========== PANEL CHAT IA ========== -->
+  <div class="ia-panel-overlay" id="iaPanelOverlay">
+    <div class="ia-panel" id="iaPanel">
+      <div class="ia-panel-header">
+        <span><i class="fas fa-robot"></i> Asistente del Portal</span>
+        <button class="ia-panel-close" id="iaPanelClose"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="ia-panel-messages" id="iaPanelMessages"></div>
+      <div class="ia-panel-footer">
+        <input class="ia-panel-input" id="iaPanelInput" type="text" placeholder="Escribí tu mensaje..." autocomplete="off"/>
+        <button class="ia-panel-send" id="iaPanelSend"><i class="fas fa-paper-plane"></i></button>
+      </div>
+    </div>
+  </div>
 
+  <script src="app.js"></script>
+  <script src="auth.js"></script>
+  <script>
+    const WORKER_URL = 'https://groq-proxy.vicente200950.workers.dev/';
+
+    const heroWrap        = document.getElementById('heroIaWrap');
+    const heroBtn         = document.getElementById('heroIaBtn');
+    const heroInput       = document.getElementById('heroIaInput');
+    const heroSend        = document.getElementById('heroIaSend');
+    const iaPanelOverlay  = document.getElementById('iaPanelOverlay');
+    const iaPanelMessages = document.getElementById('iaPanelMessages');
+    const iaPanelInput    = document.getElementById('iaPanelInput');
+    const iaPanelSend     = document.getElementById('iaPanelSend');
+    const iaPanelClose    = document.getElementById('iaPanelClose');
+
+    let chatHistory = [];
+    let chatBusy = false;
+
+    /* ── Hero IA ── */
     function abrirIa() {
       heroWrap.classList.add('open');
       setTimeout(() => heroInput.focus(), 60);
     }
 
-    function enviarPregunta() {
-      const q = heroInput.value.trim();
-      if (!q) return;
-      window.open('editor.html?q=' + encodeURIComponent(q), '_blank', 'noopener');
-      heroInput.value = '';
+    function abrirPanel(preguntaInicial) {
+      chatHistory = [];
+      iaPanelMessages.innerHTML = '';
       heroWrap.classList.remove('open');
+      heroInput.value = '';
+      iaPanelOverlay.classList.add('open');
+      if (preguntaInicial) {
+        iaPanelInput.value = preguntaInicial;
+        enviarMensajePanel();
+      } else {
+        setTimeout(() => iaPanelInput.focus(), 80);
+      }
     }
 
+    function cerrarPanel() {
+      iaPanelOverlay.classList.remove('open');
+    }
+
+    /* ── Contexto del portal para el sistema ── */
+    function getPortalContext() {
+      const mat    = JSON.parse(localStorage.getItem('materias')       || '[]');
+      const tareas = JSON.parse(localStorage.getItem('portal_tareas')  || '[]');
+      const exams  = JSON.parse(localStorage.getItem('portal_examenes')|| '[]');
+
+      const lineas = ['=== DATOS DEL PORTAL ESTUDIANTIL ==='];
+
+      if (mat.length) {
+        lineas.push('\nMATERIAS REGISTRADAS:');
+        mat.forEach(m => lineas.push('  - ' + (typeof m === 'string' ? m : m.nombre)));
+      } else {
+        lineas.push('\nMATERIAS: ninguna registrada');
+      }
+
+      const pend = tareas.filter(t => !t.completada);
+      if (pend.length) {
+        lineas.push('\nTAREAS PENDIENTES:');
+        pend.forEach(t => lineas.push('  - ' + t.nombre + ' (' + t.materia + ') — vence: ' + t.vence));
+      } else {
+        lineas.push('\nTAREAS PENDIENTES: ninguna');
+      }
+
+      if (exams.length) {
+        lineas.push('\nEXÁMENES:');
+        exams.forEach(e => lineas.push('  - ' + e.materia + ': ' + e.tema + ' — fecha: ' + e.vence));
+      } else {
+        lineas.push('\nEXÁMENES: ninguno registrado');
+      }
+
+      return lineas.join('\n');
+    }
+
+    function getSystemPrompt() {
+      const hoy = new Date().toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+      return `Sos el asistente inteligente del Portal Estudiantil de un estudiante argentino de secundaria. Tenés acceso completo a los datos del portal y podés ejecutar acciones directamente.
+
+La fecha de hoy es: ${hoy}. Usá siempre este año para las fechas a menos que el usuario especifique otro.
+
+${getPortalContext()}
+
+ACCIONES DISPONIBLES:
+Cuando el usuario pida agregar un examen o una tarea, incluí al final de tu respuesta uno o más bloques con este formato exacto:
+@@ACCION:{"tipo":"agregar_examen","materia":"NombreMateria","tema":"Tema del examen","fecha":"YYYY-MM-DD"}@@
+@@ACCION:{"tipo":"agregar_tarea","nombre":"Nombre de la tarea","materia":"NombreMateria","fecha":"YYYY-MM-DD"}@@
+
+REGLAS:
+- Antes de ejecutar una acción verificá que tenés TODOS los datos. Si falta alguno (materia, tema/nombre, fecha) preguntá naturalmente antes de ejecutar.
+- La materia debe coincidir EXACTAMENTE con alguna de las materias registradas. Si el usuario menciona una que no existe, avisale.
+- Fechas en formato YYYY-MM-DD.
+- Respondé siempre en español argentino, de forma concisa y amigable.
+- Incluí el bloque @@ACCION:...@@ SOLO cuando vayas a ejecutar la acción (cuando tengas todos los datos confirmados).
+- Podés ejecutar múltiples acciones en una respuesta si el usuario lo pidió.`;
+    }
+
+    /* ── Mensajes en el panel ── */
+    function addMsg(texto, tipo) {
+      const div = document.createElement('div');
+      div.className = 'ia-msg ' + tipo;
+      div.textContent = texto;
+      iaPanelMessages.appendChild(div);
+      iaPanelMessages.scrollTop = iaPanelMessages.scrollHeight;
+      return div;
+    }
+
+    /* ── Popular un <select> con las materias actuales ── */
+    function poblarSelectMaterias(select) {
+      select.innerHTML = '<option value="" disabled selected>Seleccioná una materia...</option>';
+      document.querySelectorAll('#materiasGrid .mat-card h3').forEach(h3 => {
+        const opt = document.createElement('option');
+        opt.value = opt.textContent = h3.textContent;
+        select.appendChild(opt);
+      });
+    }
+
+    /* ── Ejecutar acciones de la IA ── */
+    function ejecutarAccion(accion) {
+      if (accion.tipo === 'agregar_examen') {
+        const { materia, tema, fecha } = accion;
+        if (!materia || !tema || !fecha) return null;
+        poblarSelectMaterias(examenMateria);
+        examenMateria.value    = materia;
+        examenTema.value       = tema;
+        examenFecha.value      = fecha;
+        examenUrl.value        = '';
+        examenNombreLink.value = '';
+        crearExamen();
+        return '✓ Examen de ' + materia + ' (' + tema + ') agregado para el ' + fecha;
+      }
+      if (accion.tipo === 'agregar_tarea') {
+        const { nombre, materia, fecha } = accion;
+        if (!nombre || !materia || !fecha) return null;
+        poblarSelectMaterias(tareaMateria);
+        tareaNombre.value  = nombre;
+        tareaMateria.value = materia;
+        tareaFecha.value   = fecha;
+        tareaUrl.value     = '';
+        crearTarea();
+        return '✓ Tarea "' + nombre + '" de ' + materia + ' agregada para el ' + fecha;
+      }
+      return null;
+    }
+
+    function parsearYEjecutar(respuesta) {
+      const regex = /@@ACCION:(\{[^@]+\})@@/g;
+      let match;
+      const resultados = [];
+      while ((match = regex.exec(respuesta)) !== null) {
+        try {
+          const r = ejecutarAccion(JSON.parse(match[1]));
+          if (r) resultados.push(r);
+        } catch(e) {}
+      }
+      return resultados;
+    }
+
+    /* ── Enviar mensaje al chat ── */
+    async function enviarMensajePanel() {
+      const texto = iaPanelInput.value.trim();
+      if (!texto || chatBusy) return;
+
+      chatBusy = true;
+      iaPanelSend.disabled = true;
+      iaPanelInput.value = '';
+
+      addMsg(texto, 'user');
+      chatHistory.push({ role: 'user', content: texto });
+
+      const thinking = addMsg('Pensando...', 'bot thinking');
+
+      try {
+        const resp = await fetch(WORKER_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages: [{ role: 'system', content: getSystemPrompt() }, ...chatHistory],
+            max_tokens: 1024,
+            temperature: 0.7,
+          }),
+        });
+
+        const data = await resp.json();
+        const respuesta = data.choices[0].message.content;
+        chatHistory.push({ role: 'assistant', content: respuesta });
+
+        const textoLimpio = respuesta.replace(/@@ACCION:\{[^@]+\}@@/g, '').trim();
+        thinking.className = 'ia-msg bot';
+        thinking.textContent = textoLimpio;
+        iaPanelMessages.scrollTop = iaPanelMessages.scrollHeight;
+
+        const resultados = parsearYEjecutar(respuesta);
+        resultados.forEach(r => {
+          const conf = addMsg(r, 'bot accion-ok');
+          iaPanelMessages.scrollTop = iaPanelMessages.scrollHeight;
+        });
+      } catch(e) {
+        thinking.className = 'ia-msg bot';
+        thinking.textContent = 'Error al conectar con la IA. Intentá de nuevo.';
+        thinking.style.color = 'var(--red)';
+      }
+
+      chatBusy = false;
+      iaPanelSend.disabled = false;
+      setTimeout(() => iaPanelInput.focus(), 50);
+    }
+
+    /* ── Listeners hero ── */
     heroBtn.addEventListener('click', abrirIa);
-    heroSend.addEventListener('click', enviarPregunta);
+    heroSend.addEventListener('click', () => {
+      const q = heroInput.value.trim();
+      if (q) abrirPanel(q);
+    });
     heroInput.addEventListener('keydown', e => {
-      if (e.key === 'Enter') enviarPregunta();
+      if (e.key === 'Enter') { const q = heroInput.value.trim(); if (q) abrirPanel(q); }
       if (e.key === 'Escape') heroWrap.classList.remove('open');
     });
     document.addEventListener('click', e => {
-      if (!heroWrap.contains(e.target)) heroWrap.classList.remove('open');
+      if (!heroWrap.contains(e.target) && !iaPanelOverlay.contains(e.target)) {
+        heroWrap.classList.remove('open');
+      }
+    });
+
+    /* ── Listeners panel ── */
+    iaPanelClose.addEventListener('click', cerrarPanel);
+    iaPanelOverlay.addEventListener('click', e => { if (e.target === iaPanelOverlay) cerrarPanel(); });
+    iaPanelSend.addEventListener('click', enviarMensajePanel);
+    iaPanelInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') enviarMensajePanel();
+      if (e.key === 'Escape') cerrarPanel();
     });
   </script>
 </body>

@@ -220,6 +220,9 @@ function actualizarEventosList() {
 
 // ===== STATS E INICIO =====
 function actualizarStats() {
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+
+  // ── Stats superiores ──
   const numMaterias = document.querySelectorAll('#materiasGrid .mat-card').length;
   document.getElementById('statMaterias').textContent = numMaterias;
 
@@ -229,9 +232,38 @@ function actualizarStats() {
   ).length;
   document.getElementById('statTareasPend').textContent = pendientes;
 
-  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
   const proximosExamenes = examenesData.filter(e => e.vence >= hoy).length;
   document.getElementById('statExamenes').textContent = proximosExamenes;
+
+  // ── Quick nav ──
+  const qMat = document.getElementById('qnavMaterias');
+  if (qMat) qMat.textContent = numMaterias > 0
+    ? numMaterias + (numMaterias === 1 ? ' materia activa' : ' materias activas')
+    : 'Sin materias registradas';
+
+  const qTar = document.getElementById('qnavTareas');
+  if (qTar) qTar.textContent = pendientes > 0
+    ? pendientes + (pendientes === 1 ? ' tarea pendiente' : ' tareas pendientes')
+    : 'Sin tareas pendientes';
+
+  const qEx = document.getElementById('qnavExamenes');
+  if (qEx) qEx.textContent = proximosExamenes > 0
+    ? proximosExamenes + (proximosExamenes === 1 ? ' examen próximo' : ' exámenes próximos')
+    : 'Sin exámenes registrados';
+
+  const en30 = new Date(hoy); en30.setDate(en30.getDate() + 30);
+  const eventosProximos = eventsData.filter(e => !e.completada && e.vence >= hoy && e.vence <= en30).length
+    + examenesData.filter(e => e.vence >= hoy && e.vence <= en30).length;
+  const qCal = document.getElementById('qnavCalendario');
+  if (qCal) qCal.textContent = eventosProximos > 0
+    ? eventosProximos + (eventosProximos === 1 ? ' evento próximo' : ' eventos próximos')
+    : 'Sin eventos próximos';
+
+  const numApuntes = document.querySelectorAll('.apunte-item').length;
+  const qApu = document.getElementById('qnavApuntes');
+  if (qApu) qApu.textContent = numApuntes > 0
+    ? numApuntes + (numApuntes === 1 ? ' apunte guardado' : ' apuntes guardados')
+    : 'Sin apuntes guardados';
 }
 
 function actualizarActividadesSemana() {
@@ -696,6 +728,7 @@ function guardarMateriaEnStorage() {
     nombres.push(h3.textContent);
   });
   localStorage.setItem('materias', JSON.stringify(nombres));
+  if (typeof window.syncPortalData === 'function') window.syncPortalData();
 }
 
 function crearCardMateria(nombre) {
@@ -1063,6 +1096,7 @@ function actualizarCounts() {
 }
 
 function guardarPortalData() {
+  if (typeof window.syncPortalData === 'function') window.syncPortalData();
   try {
     // Tareas (incluye nombre de archivo adjunto si hay)
     const tareasSerial = eventsData.map(e => ({
@@ -1389,6 +1423,112 @@ document.getElementById('detalleExamenCerrar').addEventListener('click', cerrarD
 modalDetalleExamen.addEventListener('click', e => { if (e.target === modalDetalleExamen) cerrarDetalleExamen(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarDetalleExamen(); });
 
+// ===== RESTAURAR TAREAS DESDE LOCALSTORAGE =====
+(function restaurarTareas() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('portal_tareas') || '[]');
+    if (!saved.length) return;
+    const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+    saved.forEach(t => {
+      const vence    = new Date(t.vence + 'T00:00:00');
+      const diffDias = Math.round((vence - hoy) / 86400000);
+      const esUrgente = diffDias <= 2;
+      const dotColor  = diffDias <= 2 ? 'red' : diffDias <= 7 ? 'orange' : 'yellow';
+      let venceTexto;
+      if      (diffDias === 0) venceTexto = 'Vence hoy';
+      else if (diffDias === 1) venceTexto = 'Vence mañana';
+      else if (diffDias <= 7)  venceTexto = `Vence en ${diffDias} días`;
+      else { const d = vence.toLocaleDateString('es-AR', { day:'numeric', month:'long' }); venceTexto = `Vence el ${d}`; }
+
+      const id        = t.id || ('t' + tareaIdCounter++);
+      const taskEntry = { id, nombre: t.nombre, materia: t.materia, vence, url: t.url || '', archivo: null, completada: t.completada };
+      eventsData.push(taskEntry);
+
+      const li = document.createElement('li');
+      li.className = 'task-item' + (esUrgente && !t.completada ? ' urgent' : '') + (t.completada ? ' done-task' : '');
+      li.id = 'tarea-' + id;
+      li.innerHTML = `
+        <div class="task-check">
+          <input type="checkbox" id="${id}" ${t.completada ? 'checked' : ''}/>
+          <label for="${id}"></label>
+        </div>
+        <div class="task-body">
+          <h4>${taskLink(t.nombre, t.url)}</h4>
+          <p><i class="fas fa-book"></i> ${escHtml(t.materia)} &nbsp;·&nbsp; <i class="fas fa-clock"></i> ${venceTexto}</p>
+        </div>
+        <span class="priority-dot ${dotColor}"></span>`;
+
+      const lista = esUrgente ? colUrgentes : colSemana;
+
+      li.querySelector('input[type=checkbox]').addEventListener('change', function() {
+        if (this.checked) {
+          li.classList.add('done-task');
+          setTimeout(() => {
+            li.remove();
+            if (!lista.querySelector('.task-item')) {
+              const msg = document.createElement('li'); msg.className = 'no-tasks-msg';
+              msg.innerHTML = esUrgente ? '<i class="fas fa-check"></i> Sin urgentes' : '<i class="fas fa-check"></i> Sin tareas esta semana';
+              lista.appendChild(msg);
+            }
+            const doneMsg = doneList.querySelector('.no-tasks-msg');
+            if (doneMsg) doneMsg.remove();
+            doneList.appendChild(li);
+            doneCount++; doneCountEl.textContent = doneCount;
+            taskEntry.completada = true;
+            actualizarCounts(); refrescarDetalleMateria?.();
+          }, 280);
+        } else {
+          li.classList.remove('done-task');
+          setTimeout(() => {
+            li.remove();
+            const noMsgDest = lista.querySelector('.no-tasks-msg');
+            if (noMsgDest) noMsgDest.remove();
+            lista.appendChild(li);
+            doneCount--; doneCountEl.textContent = doneCount;
+            if (!doneList.querySelector('.task-item')) {
+              const msg = document.createElement('li'); msg.className = 'no-tasks-msg';
+              msg.innerHTML = '<i class="fas fa-inbox"></i> Nada completado aún';
+              doneList.appendChild(msg);
+            }
+            taskEntry.completada = false;
+            actualizarCounts(); refrescarDetalleMateria?.();
+          }, 280);
+        }
+      });
+
+      if (t.completada) {
+        const noMsg = doneList.querySelector('.no-tasks-msg');
+        if (noMsg) noMsg.remove();
+        doneList.appendChild(li);
+        doneCount++;
+      } else {
+        const noMsg = lista.querySelector('.no-tasks-msg');
+        if (noMsg) noMsg.remove();
+        lista.appendChild(li);
+      }
+    });
+    doneCountEl.textContent = doneCount;
+  } catch(e) { console.error('restaurarTareas:', e); }
+})();
+
+// ===== RESTAURAR EXÁMENES DESDE LOCALSTORAGE =====
+(function restaurarExamenes() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('portal_examenes') || '[]');
+    if (!saved.length) return;
+    const emptyEl = document.getElementById('examenesEmpty');
+    if (emptyEl) emptyEl.remove();
+    saved.forEach(e => {
+      const entry = { materia: e.materia, tema: e.tema, vence: new Date(e.vence + 'T00:00:00'), links: e.links || [] };
+      examenesData.push(entry);
+      examenesGrid.appendChild(buildExamenCard(entry));
+    });
+  } catch(e) { console.error('restaurarExamenes:', e); }
+})();
+
 // ===== INIT =====
 buildCalendar(calYear, calMonth);
 refreshDoneList();
+actualizarEventosList();
+actualizarActividadesSemana();
+actualizarStats();
