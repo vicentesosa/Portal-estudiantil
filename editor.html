@@ -212,29 +212,24 @@ html, body {
   position: relative;
 }
 
-/* Líneas de separación entre páginas */
+/* Separadores entre páginas */
 #pageLines {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
   pointer-events: none;
   z-index: 2;
 }
-.page-break-line {
-  position: absolute;
-  left: 0; right: 0;
-  height: 2px;
-  background: linear-gradient(to right, transparent, rgba(0,0,0,.10) 10%, rgba(0,0,0,.10) 90%, transparent);
-  box-shadow: 0 1px 6px rgba(0,0,0,.13), 0 -1px 6px rgba(0,0,0,.10);
-}
 .page-break-num {
   position: absolute;
-  right: -56px;
-  transform: translateY(-50%);
-  font-size: .65rem;
-  color: #aaa;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: .6rem;
+  color: #666;
   user-select: none;
   white-space: nowrap;
   font-family: Arial, sans-serif;
+  letter-spacing: .06em;
+  text-transform: uppercase;
 }
 
 /* Editor content */
@@ -373,6 +368,14 @@ html, body {
   align-self: flex-start; border-radius: 10px 10px 10px 3px;
 }
 .ai-bubble-bot.thinking { color: var(--muted); font-style: italic; }
+.ai-bubble-wrapper { display:flex; flex-direction:column; align-items:flex-start; max-width:94%; }
+.ai-paste-btn {
+  margin-top: .3rem; padding: .2rem .6rem;
+  font-size: .72rem; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--card); color: var(--muted); cursor: pointer;
+  transition: all .15s;
+}
+.ai-paste-btn:hover { background: rgba(108,99,255,.2); color: var(--accent); border-color: var(--accent); }
 .ai-input-area {
   flex-shrink: 0; padding: .6rem .75rem .75rem;
   border-top: 1px solid var(--border);
@@ -743,35 +746,62 @@ function scheduleSave() {
 }
 
 // ── Paginación automática ─────────────────────────────────────────────
-const PAGE_H    = 1123; // altura A4 en px
-const PAD_TOP   = 72;
-const PAD_BOT   = 80;
+const PAGE_H  = 1123; // altura A4 en px
+const GAP_H   = 32;   // espacio oscuro entre páginas
+const PAD_TOP = 72;
+const PAD_BOT = 80;
 
 function updatePageLines() {
-  const wrapper    = document.getElementById('docWrapper');
-  const container  = document.getElementById('pageLines');
-  const wrapperH   = PAD_TOP + editor.scrollHeight + PAD_BOT;
-  const totalPages = Math.ceil(wrapperH / PAGE_H);
+  const wrapper   = document.getElementById('docWrapper');
+  const container = document.getElementById('pageLines');
+  const contentH  = PAD_TOP + editor.scrollHeight + PAD_BOT;
+  const totalPages = Math.max(1, Math.ceil(contentH / PAGE_H));
+  const totalH     = totalPages * PAGE_H + (totalPages - 1) * GAP_H;
 
-  // Asegurar que el wrapper siempre termine en hoja completa
-  wrapper.style.minHeight = (totalPages * PAGE_H) + 'px';
+  wrapper.style.minHeight = totalH + 'px';
 
-  // Redibujar líneas
+  // Gradiente que alterna páginas blancas y espacios oscuros
+  const stops = [];
+  let y = 0;
+  for (let i = 0; i < totalPages; i++) {
+    if (i > 0) {
+      stops.push(`#0f1117 ${y}px`, `#0f1117 ${y + GAP_H}px`);
+      y += GAP_H;
+    }
+    stops.push(`#fff ${y}px`, `#fff ${y + PAGE_H}px`);
+    y += PAGE_H;
+  }
+  wrapper.style.backgroundImage = `linear-gradient(to bottom,${stops.join(',')})`;
+
+  // Etiquetas de página en el espacio oscuro
   container.innerHTML = '';
+  let gapY = PAGE_H;
   for (let i = 1; i < totalPages; i++) {
-    const y = i * PAGE_H;
-
-    const line = document.createElement('div');
-    line.className = 'page-break-line';
-    line.style.top = y + 'px';
-    container.appendChild(line);
-
     const label = document.createElement('span');
     label.className = 'page-break-num';
-    label.style.top  = y + 'px';
-    label.textContent = 'Página ' + (i + 1);
+    label.style.top = (gapY + GAP_H / 2) + 'px';
+    label.textContent = '— Página ' + (i + 1) + ' —';
     container.appendChild(label);
+    gapY += PAGE_H + GAP_H;
   }
+}
+
+// ── Pegar respuesta de IA en el apunte ───────────────────────────────
+function pasteToEditor(text) {
+  const html = text
+    .split('\n\n')
+    .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
+    .join('');
+  editor.focus();
+  const range = document.createRange();
+  range.selectNodeContents(editor);
+  range.collapse(false);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+  document.execCommand('insertHTML', false, '<p><br></p>' + html);
+  updatePageLines();
+  scheduleSave();
 }
 
 document.getElementById('btnSave').addEventListener('click', saveNote);
@@ -1115,6 +1145,23 @@ function addAiBubble(text, role, scroll = true) {
   const div = document.createElement('div');
   div.className = 'ai-bubble ' + (role === 'user' ? 'ai-bubble-user' : 'ai-bubble-bot');
   div.textContent = text;
+
+  if (role === 'bot') {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'ai-bubble-wrapper';
+    wrapper.appendChild(div);
+
+    const btn = document.createElement('button');
+    btn.className = 'ai-paste-btn';
+    btn.textContent = '📋 Pegar en apunte';
+    btn.addEventListener('click', () => pasteToEditor(text));
+    wrapper.appendChild(btn);
+
+    aiChatHistory.appendChild(wrapper);
+    if (scroll) aiChatHistory.scrollTop = aiChatHistory.scrollHeight;
+    return div;
+  }
+
   aiChatHistory.appendChild(div);
   if (scroll) aiChatHistory.scrollTop = aiChatHistory.scrollHeight;
   return div;
@@ -1216,9 +1263,14 @@ function getPortalContext() {
   return { text: lines.join('\n'), images };
 }
 
+function wantsPaste(msg) {
+  return /peg[aá]|pon(é|e)?lo|escrib[ií]lo|agrega(lo)?|añad[ií]|en (la hoja|el apunte)|al apunte/i.test(msg);
+}
+
 async function sendAiMessage() {
   const text = aiInput.value.trim();
   if (!text) return;
+  const autoPaste = wantsPaste(text);
   if (!currentConvId) newConversation();
 
   aiInput.value = '';
@@ -1291,9 +1343,22 @@ INSTRUCCIONES:
     thinkingBubble.classList.remove('thinking');
     thinkingBubble.textContent = reply;
 
+    // Agregar botón "Pegar en apunte" al bubble existente
+    const pasteBtn = document.createElement('button');
+    pasteBtn.className = 'ai-paste-btn';
+    pasteBtn.textContent = '📋 Pegar en apunte';
+    pasteBtn.addEventListener('click', () => pasteToEditor(reply));
+    const wrapper = document.createElement('div');
+    wrapper.className = 'ai-bubble-wrapper';
+    thinkingBubble.parentNode.insertBefore(wrapper, thinkingBubble);
+    wrapper.appendChild(thinkingBubble);
+    wrapper.appendChild(pasteBtn);
+
+    if (autoPaste) pasteToEditor(reply);
+
     conv.messages.push({ role: 'assistant', content: reply });
     saveConversations();
-    autoNameConv(conv);   // nombra la conv en background
+    autoNameConv(conv);
 
   } catch (err) {
     thinkingBubble.classList.remove('thinking');
