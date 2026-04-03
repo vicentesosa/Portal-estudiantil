@@ -737,6 +737,12 @@ html, body {
   </div>
 </div>
 
+<!-- Menú contextual de conversaciones -->
+<div id="convContextMenu">
+  <button class="ctx-item" id="ctxRename"><i class="fas fa-pen"></i> Cambiar nombre</button>
+  <button class="ctx-item ctx-delete" id="ctxDelete"><i class="fas fa-trash"></i> Eliminar conversación</button>
+</div>
+
 <script>
 // ══════════════════════════════════════════════════════════════════════
 //  INIT
@@ -1454,10 +1460,5 @@ updateWordCount();
 updateState();
 </script>
 
-<!-- Menú contextual de conversaciones -->
-<div id="convContextMenu">
-  <button class="ctx-item" id="ctxRename"><i class="fas fa-pen"></i> Cambiar nombre</button>
-  <button class="ctx-item ctx-delete" id="ctxDelete"><i class="fas fa-trash"></i> Eliminar conversación</button>
-</div>
 </body>
 </html>
