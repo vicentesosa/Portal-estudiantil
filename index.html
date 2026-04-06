@@ -7,6 +7,13 @@
   <link rel="stylesheet" href="style.css"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    if (typeof pdfjsLib !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+  </script>
 </head>
 <body>
 
@@ -95,9 +102,9 @@
         <h1 class="hero-title">¡Buen día! <span class="wave">👋</span></h1>
         <p class="hero-sub">Este es tu portal estudiantil. Navegá por las secciones usando los botones de abajo o el menú de arriba.</p>
         <div class="hero-badges">
-          <span class="badge badge-success"><i class="fas fa-check-circle"></i> Sin tareas pendientes</span>
-          <span class="badge badge-success"><i class="fas fa-calendar-check"></i> Sin eventos esta semana</span>
-          <span class="badge badge-success"><i class="fas fa-star"></i> Sin proyectos activos</span>
+          <span class="badge badge-success" id="heroBadgeTareas"><i class="fas fa-check-circle"></i> Sin tareas pendientes</span>
+          <span class="badge badge-success" id="heroBadgeEventos"><i class="fas fa-calendar-check"></i> Sin eventos esta semana</span>
+          <span class="badge badge-success" id="heroBadgeProyectos"><i class="fas fa-star"></i> Sin proyectos activos</span>
         </div>
       </div>
       <div class="hero-ia-wrap" id="heroIaWrap">
@@ -245,7 +252,7 @@
 
       <div class="tareas-cols">
 
-        <!-- Columna Pendientes -->
+        <!-- Columna Urgentes -->
         <div class="tareas-col">
           <div class="col-head urgent-head">
             <i class="fas fa-fire"></i> Urgentes
@@ -256,14 +263,14 @@
           </ul>
         </div>
 
-        <!-- Columna Esta semana -->
+        <!-- Columna Pendientes -->
         <div class="tareas-col">
           <div class="col-head week-head">
-            <i class="fas fa-calendar-week"></i> Esta semana
+            <i class="fas fa-list"></i> Pendientes
             <span class="col-count">0</span>
           </div>
           <ul class="task-list">
-            <li class="no-tasks-msg"><i class="fas fa-check"></i> Sin tareas esta semana</li>
+            <li class="no-tasks-msg"><i class="fas fa-check"></i> Sin tareas pendientes</li>
           </ul>
         </div>
 
@@ -383,8 +390,8 @@
         <label class="modal-label" style="margin-top:1rem">Fecha de entrega</label>
         <input class="modal-input modal-date" id="tareaFecha" type="date"/>
 
-        <label class="modal-label" style="margin-top:1rem">URL <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(opcional)</span></label>
-        <input class="modal-input" id="tareaUrl" type="url" placeholder="https://..." autocomplete="off"/>
+        <label class="modal-label" style="margin-top:1rem">URLs <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(opcional)</span></label>
+        <div id="tareaUrlsContainer" class="tarea-urls-container"></div>
 
         <label class="modal-label" style="margin-top:1rem">Archivo <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(opcional)</span></label>
         <label class="tarea-file-label" id="tareaFileLabel">
@@ -397,6 +404,44 @@
         <button class="modal-btn-confirm" id="tareaConfirm">
           <i class="fas fa-plus"></i> Agregar
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MODAL DETALLE TAREA ========== -->
+  <div class="modal-overlay" id="modalDetalleTarea">
+    <div class="modal modal-dt">
+      <div class="modal-header">
+        <h3 id="dtNombre" class="dt-nombre-titulo"></h3>
+        <button class="modal-close" id="dtClose"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <p class="dt-meta"><i class="fas fa-book"></i> <span id="dtMateria"></span></p>
+        <p class="dt-meta"><i class="fas fa-clock"></i> <span id="dtFecha"></span></p>
+        <div id="dtArchivos" class="dt-archivos"></div>
+        <!-- Inline: editar nombre -->
+        <div id="dtRenombrarBox" class="dt-inline-box" style="display:none">
+          <input id="dtRenombrarInput" class="modal-input" type="text" placeholder="Nuevo nombre..."/>
+          <div class="dt-inline-actions">
+            <button class="dt-btn-sm" id="dtRenombrarGuardar"><i class="fas fa-check"></i> Guardar</button>
+            <button class="dt-btn-sm dt-btn-sm-cancel" id="dtRenombrarCancelar">Cancelar</button>
+          </div>
+        </div>
+        <!-- Inline: agregar URL -->
+        <div id="dtUrlBox" class="dt-inline-box" style="display:none">
+          <input id="dtUrlInput" class="modal-input" type="url" placeholder="https://..." autocomplete="off"/>
+          <div class="dt-inline-actions">
+            <button class="dt-btn-sm" id="dtUrlGuardar"><i class="fas fa-check"></i> Guardar</button>
+            <button class="dt-btn-sm dt-btn-sm-cancel" id="dtUrlCancelar">Cancelar</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer dt-footer">
+        <button class="dt-accion-btn" id="dtRenombrar"><i class="fas fa-edit"></i> Cambiar nombre</button>
+        <button class="dt-accion-btn" id="dtAgregarUrl"><i class="fas fa-link"></i> Agregar URL</button>
+        <button class="dt-accion-btn" id="dtAgregarArchivo"><i class="fas fa-paperclip"></i> Agregar archivo</button>
+        <input type="file" id="dtArchivoInput" accept="image/*,.pdf,.doc,.docx,.txt,.pptx,.xlsx" style="display:none"/>
+        <button class="dt-accion-btn dt-accion-danger" id="dtEliminar"><i class="fas fa-trash"></i> Eliminar</button>
       </div>
     </div>
   </div>
@@ -672,66 +717,296 @@
       iaPanelOverlay.classList.remove('open');
     }
 
-    /* ── Contexto del portal para el sistema ── */
+    /* ── Leer TODOS los datos del portal directo del DOM y localStorage ── */
+    function leerTodosLosDatos() {
+      const datos = {
+        materias: [],
+        tareas: [],
+        examenes: [],
+        apuntes: {}
+      };
+
+      // Materias desde DOM (fuente más actualizada)
+      document.querySelectorAll('#materiasGrid .mat-card h3').forEach(h3 => {
+        datos.materias.push(h3.textContent.trim());
+      });
+      // Fallback a localStorage si DOM está vacío
+      if (!datos.materias.length) {
+        try { datos.materias = JSON.parse(localStorage.getItem('materias') || '[]').map(m => typeof m === 'string' ? m : m.nombre); } catch {}
+      }
+
+      // Tareas: leer SIEMPRE de localStorage (fuente de verdad, guardarPortalData siempre escribe ahí)
+      // y enriquecer con textoExtraido de eventsData si está disponible
+      const textoExtraidoMap = new Map(); // id → textoExtraido
+      eventsData.forEach(t => {
+        (t.archivos || []).forEach(a => {
+          if (a.textoExtraido) textoExtraidoMap.set((t.id||'') + '|' + (a.name||''), a.textoExtraido);
+        });
+      });
+
+      try {
+        const saved = JSON.parse(localStorage.getItem('portal_tareas') || '[]');
+        saved.forEach(t => {
+          const urlsLS = t.urls || (t.url ? [t.url] : []);
+          const textoArch = localStorage.getItem('portal_archivo_texto_' + t.id) || '';
+          datos.tareas.push({
+            id:         t.id || '',
+            nombre:     t.nombre || '',
+            materia:    t.materia || '',
+            vence:      t.vence || '',
+            completada: !!t.completada,
+            urls:       urlsLS,
+            archivos:   (t.archivos || []).map(a => ({
+              name: a.name,
+              type: a.type || '',
+              textoExtraido: textoExtraidoMap.get((t.id||'') + '|' + (a.name||'')) || textoArch
+            }))
+          });
+        });
+      } catch {}
+
+      // Exámenes
+      try {
+        const saved = JSON.parse(localStorage.getItem('portal_examenes') || '[]');
+        saved.forEach(e => datos.examenes.push({ materia: e.materia, tema: e.tema, vence: e.vence, links: e.links || [] }));
+      } catch {}
+
+      // Apuntes
+      try {
+        const ap = JSON.parse(localStorage.getItem('portal_apuntes') || '{}');
+        Object.entries(ap).forEach(([mat, items]) => {
+          if (!items || !items.length) return;
+          datos.apuntes[mat] = items.map(it => {
+            const item = { tipo: it.tipo, nombre: it.nombre, url: it.url || '' };
+            if (it.tipo === 'nota' && it.noteId) {
+              try {
+                const nd = JSON.parse(localStorage.getItem('apunte_' + it.noteId) || 'null');
+                if (nd && nd.content) {
+                  item.contenido = nd.content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 1000);
+                }
+              } catch {}
+            }
+            return item;
+          });
+        });
+      } catch {}
+
+      return datos;
+    }
+
+    /* ── Recolectar imágenes (todas las claves de localStorage) ── */
+    function getImagenesDisponibles() {
+      const imgs = [];
+      const seen = new Set();
+
+      // Desde eventsData en memoria
+      eventsData.forEach(task => {
+        (task.archivos || []).forEach(a => {
+          if (a.type && a.type.startsWith('image/') && a.dataUrl && a.dataUrl.startsWith('data:')) {
+            const key = task.nombre + '|' + a.name;
+            if (!seen.has(key)) { seen.add(key); imgs.push({ taskNombre: task.nombre, fileName: a.name, dataUrl: a.dataUrl }); }
+          }
+        });
+      });
+
+      // Desde localStorage — buscar TODAS las claves portal_archivo_*
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (!k || !k.startsWith('portal_archivo_')) continue;
+          const dataUrl = localStorage.getItem(k);
+          if (!dataUrl || !dataUrl.startsWith('data:image/')) continue;
+          // Buscar a qué tarea pertenece
+          const taskId = k.replace('portal_archivo_', '').split('_')[0];
+          const tarea  = eventsData.find(t => t.id === taskId);
+          const nombre = tarea ? tarea.nombre : ('tarea ' + taskId);
+          const key    = nombre + '|' + k;
+          if (!seen.has(key)) { seen.add(key); imgs.push({ taskNombre: nombre, fileName: k, dataUrl }); }
+        }
+      } catch {}
+
+      return imgs;
+    }
+
+    /* ── Contexto completo del portal ── */
     function getPortalContext() {
-      const mat    = JSON.parse(localStorage.getItem('materias')       || '[]');
-      const tareas = JSON.parse(localStorage.getItem('portal_tareas')  || '[]');
-      const exams  = JSON.parse(localStorage.getItem('portal_examenes')|| '[]');
+      const d = leerTodosLosDatos();
+      const lineas = [];
 
-      const lineas = ['=== DATOS DEL PORTAL ESTUDIANTIL ==='];
+      lineas.push('MATERIAS REGISTRADAS: ' + (d.materias.length ? d.materias.join(', ') : 'ninguna'));
 
-      if (mat.length) {
-        lineas.push('\nMATERIAS REGISTRADAS:');
-        mat.forEach(m => lineas.push('  - ' + (typeof m === 'string' ? m : m.nombre)));
-      } else {
-        lineas.push('\nMATERIAS: ninguna registrada');
-      }
+      const pend = d.tareas.filter(t => !t.completada);
+      const comp = d.tareas.filter(t => t.completada);
 
-      const pend = tareas.filter(t => !t.completada);
+      lineas.push('\nTAREAS PENDIENTES (' + pend.length + '):');
       if (pend.length) {
-        lineas.push('\nTAREAS PENDIENTES:');
-        pend.forEach(t => lineas.push('  - ' + t.nombre + ' (' + t.materia + ') — vence: ' + t.vence));
+        pend.forEach(t => {
+          lineas.push('▸ TAREA: "' + t.nombre + '"');
+          lineas.push('  Materia: ' + t.materia);
+          lineas.push('  Fecha de entrega: ' + t.vence);
+          if (t.urls && t.urls.length) {
+            lineas.push('  Links/documentos adjuntos (' + t.urls.length + '):');
+            t.urls.forEach((u, i) => lineas.push('    ' + (i + 1) + '. ' + u));
+          } else {
+            lineas.push('  Links/documentos adjuntos: ninguno');
+          }
+          if (t.archivos && t.archivos.length) {
+            lineas.push('  Archivos subidos (' + t.archivos.length + '):');
+            t.archivos.forEach((a, i) => {
+              lineas.push('    ' + (i + 1) + '. ' + a.name + (a.type ? ' [' + a.type + ']' : ''));
+              if (a.textoExtraido) lineas.push('       Contenido: ' + a.textoExtraido.slice(0, 1000));
+            });
+          } else {
+            lineas.push('  Archivos subidos: ninguno');
+          }
+        });
       } else {
-        lineas.push('\nTAREAS PENDIENTES: ninguna');
+        lineas.push('  (ninguna)');
       }
 
-      if (exams.length) {
-        lineas.push('\nEXÁMENES:');
-        exams.forEach(e => lineas.push('  - ' + e.materia + ': ' + e.tema + ' — fecha: ' + e.vence));
+      if (comp.length) {
+        lineas.push('\nTAREAS COMPLETADAS (' + comp.length + '):');
+        comp.forEach(t => lineas.push('  ✓ "' + t.nombre + '" (' + t.materia + ')'));
+      }
+
+      lineas.push('\nEXÁMENES (' + d.examenes.length + '):');
+      if (d.examenes.length) {
+        d.examenes.forEach(e => {
+          lineas.push('▸ ' + e.materia + ': ' + e.tema + ' — ' + e.vence);
+          if (e.links && e.links.length)
+            e.links.forEach(l => lineas.push('  Link: ' + l.nombre + ' → ' + l.url));
+        });
       } else {
-        lineas.push('\nEXÁMENES: ninguno registrado');
+        lineas.push('  (ninguno)');
+      }
+
+      const materiasAp = Object.keys(d.apuntes);
+      lineas.push('\nAPUNTES:');
+      if (materiasAp.length) {
+        materiasAp.forEach(mat => {
+          lineas.push('▸ ' + mat + ':');
+          d.apuntes[mat].forEach(ap => {
+            lineas.push('  [' + ap.tipo.toUpperCase() + '] ' + ap.nombre + (ap.url ? ' → ' + ap.url : ''));
+            if (ap.contenido) lineas.push('  Contenido: ' + ap.contenido);
+          });
+        });
+      } else {
+        lineas.push('  (ninguno)');
       }
 
       return lineas.join('\n');
     }
 
-    function getSystemPrompt() {
+    function getSystemPrompt(extraLinks, portalContext) {
       const hoy = new Date().toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
-      return `Sos el asistente inteligente del Portal Estudiantil de un estudiante argentino de secundaria. Tenés acceso completo a los datos del portal y podés ejecutar acciones directamente.
 
-La fecha de hoy es: ${hoy}. Usá siempre este año para las fechas a menos que el usuario especifique otro.
+      return `Sos el asistente del Portal Estudiantil. Hoy es ${hoy}.
 
-${getPortalContext()}
+DATOS ACTUALES DEL PORTAL (usá esto como contexto, nunca lo repitas):
+${portalContext}${extraLinks ? '\n\nCONTENIDO DE RECURSOS ADJUNTOS:\n' + extraLinks : ''}
 
-ACCIONES DISPONIBLES:
-Cuando el usuario pida agregar un examen o una tarea, incluí al final de tu respuesta uno o más bloques con este formato exacto:
-@@ACCION:{"tipo":"agregar_examen","materia":"NombreMateria","tema":"Tema del examen","fecha":"YYYY-MM-DD"}@@
-@@ACCION:{"tipo":"agregar_tarea","nombre":"Nombre de la tarea","materia":"NombreMateria","fecha":"YYYY-MM-DD"}@@
+COMPORTAMIENTO:
+- Respondé ÚNICAMENTE lo que el usuario pregunta. Sin introducción, sin listar datos del portal, sin repetir contexto.
+- Si el usuario pregunta algo que no tiene que ver con el portal, respondé igual de forma concisa.
+
+ACCIONES QUE PODÉS EJECUTAR:
+Para crear una tarea: @@ACCION:{"tipo":"agregar_tarea","nombre":"...","materia":"...","fecha":"YYYY-MM-DD"}@@
+Para crear un examen: @@ACCION:{"tipo":"agregar_examen","materia":"...","tema":"...","fecha":"YYYY-MM-DD"}@@
 
 REGLAS:
-- Antes de ejecutar una acción verificá que tenés TODOS los datos. Si falta alguno (materia, tema/nombre, fecha) preguntá naturalmente antes de ejecutar.
-- La materia debe coincidir EXACTAMENTE con alguna de las materias registradas. Si el usuario menciona una que no existe, avisale.
-- Fechas en formato YYYY-MM-DD.
-- Respondé siempre en español argentino, de forma concisa y amigable.
-- Incluí el bloque @@ACCION:...@@ SOLO cuando vayas a ejecutar la acción (cuando tengas todos los datos confirmados).
-- Podés ejecutar múltiples acciones en una respuesta si el usuario lo pidió.`;
+- La materia debe ser EXACTAMENTE igual a una de las registradas en los datos.
+- Incluí el bloque @@ACCION:...@@ solo cuando tengas nombre, materia y fecha confirmados.
+- Respondé siempre en español argentino, de forma concisa y amigable.`;
+    }
+
+    /* ── Crear tarea directamente (sin pasar por el modal) ── */
+    function crearTareaDesdeIA(nombre, materia, fecha) {
+      try {
+        const hoy      = new Date(); hoy.setHours(0, 0, 0, 0);
+        const vence    = new Date(fecha + 'T00:00:00');
+        if (isNaN(vence.getTime())) return false;
+        const diffDias = Math.round((vence - hoy) / 86400000);
+
+        let venceTexto;
+        if      (diffDias === 0) venceTexto = 'Vence hoy';
+        else if (diffDias === 1) venceTexto = 'Vence mañana';
+        else if (diffDias <= 7)  venceTexto = 'Vence en ' + diffDias + ' días';
+        else {
+          const d = vence.toLocaleDateString('es-AR', { day: 'numeric', month: 'long' });
+          venceTexto = 'Vence el ' + d;
+        }
+
+        const esUrgente = diffDias <= 1;
+        const dotColor  = diffDias <= 1 ? 'red' : diffDias <= 7 ? 'orange' : 'yellow';
+        const id        = 't' + tareaIdCounter++;
+        const taskEntry = { id, nombre, materia, vence, urls: [], archivos: [], completada: false };
+
+        const lista = esUrgente ? colUrgentes : colSemana;
+        const noMsg = lista.querySelector('.no-tasks-msg');
+        if (noMsg) noMsg.remove();
+
+        const li = document.createElement('li');
+        li.className = 'task-item' + (esUrgente ? ' urgent' : '');
+        li.id = 'tarea-' + id;
+        li.innerHTML =
+          '<div class="task-check">' +
+            '<input type="checkbox" id="' + id + '"/>' +
+            '<label for="' + id + '"></label>' +
+          '</div>' +
+          '<div class="task-body">' + buildTaskBodyHtml(taskEntry, venceTexto) + '</div>' +
+          '<span class="priority-dot ' + dotColor + '"></span>';
+
+        attachCheckboxHandler(li, lista, esUrgente, taskEntry);
+        attachTaskClickHandler(li, taskEntry, lista, esUrgente, dotColor, venceTexto);
+
+        lista.appendChild(li);
+        eventsData.push(taskEntry);
+        actualizarEventosList();
+        actualizarActividadesSemana();
+        buildCalendar(calYear, calMonth);
+        actualizarCounts();
+        return true;
+      } catch (e) {
+        console.error('crearTareaDesdeIA:', e);
+        return false;
+      }
     }
 
     /* ── Mensajes en el panel ── */
+    function renderMd(text) {
+      // Escapar HTML
+      let h = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      // Títulos ## y ###
+      h = h.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+      h = h.replace(/^## (.+)$/gm,  '<h3>$1</h3>');
+      h = h.replace(/^# (.+)$/gm,   '<h3>$1</h3>');
+      // Negrita **texto**
+      h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      // Cursiva *texto*
+      h = h.replace(/\*(.+?)\*/g, '<em>$1</em>');
+      // Código `texto`
+      h = h.replace(/`(.+?)`/g, '<code>$1</code>');
+      // Listas - item
+      h = h.replace(/((?:^[-•*] .+\n?)+)/gm, m => {
+        const items = m.trim().split('\n').map(l => '<li>' + l.replace(/^[-•*] /,'') + '</li>').join('');
+        return '<ul>' + items + '</ul>';
+      });
+      // Párrafos: doble salto de línea
+      h = h.split(/\n{2,}/).map(p => {
+        if (/^<(h3|ul|ol)/.test(p.trim())) return p;
+        return '<p>' + p.replace(/\n/g, '<br>') + '</p>';
+      }).join('');
+      return h;
+    }
+
     function addMsg(texto, tipo) {
       const div = document.createElement('div');
       div.className = 'ia-msg ' + tipo;
-      div.textContent = texto;
+      if (tipo === 'bot') {
+        div.innerHTML = renderMd(texto);
+      } else {
+        div.textContent = texto;
+      }
       iaPanelMessages.appendChild(div);
       iaPanelMessages.scrollTop = iaPanelMessages.scrollHeight;
       return div;
@@ -764,12 +1039,8 @@ REGLAS:
       if (accion.tipo === 'agregar_tarea') {
         const { nombre, materia, fecha } = accion;
         if (!nombre || !materia || !fecha) return null;
-        poblarSelectMaterias(tareaMateria);
-        tareaNombre.value  = nombre;
-        tareaMateria.value = materia;
-        tareaFecha.value   = fecha;
-        tareaUrl.value     = '';
-        crearTarea();
+        const ok = crearTareaDesdeIA(nombre, materia, fecha);
+        if (!ok) return null;
         return '✓ Tarea "' + nombre + '" de ' + materia + ' agregada para el ' + fecha;
       }
       return null;
@@ -788,10 +1059,138 @@ REGLAS:
       return resultados;
     }
 
+    /* ── Cache de contenido de URLs ── */
+    const urlContenidoCache = {};
+
+    /* ── Helper: fetch con timeout compatible con Chrome antiguo ── */
+    function fetchConTimeout(url, ms) {
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), ms);
+      return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(tid));
+    }
+
+    /* ── Fetch del contenido de una URL usando Jina AI Reader ── */
+    async function fetchUrlContenido(url) {
+      if (urlContenidoCache[url] !== undefined) return urlContenidoCache[url];
+      let contenido = null;
+
+      // 1. Google Docs/Slides/Sheets: exportar directamente (más fiable para Google)
+      try {
+        const gdoc = url.match(/docs\.google\.com\/document\/d\/([a-zA-Z0-9_-]+)/);
+        if (gdoc) {
+          const r = await fetchConTimeout('https://docs.google.com/document/d/' + gdoc[1] + '/export?format=txt', 8000);
+          if (r.ok) contenido = (await r.text()).slice(0, 3500);
+        }
+        if (!contenido) {
+          const gslides = url.match(/docs\.google\.com\/presentation\/d\/([a-zA-Z0-9_-]+)/);
+          if (gslides) {
+            const r = await fetchConTimeout('https://docs.google.com/presentation/d/' + gslides[1] + '/export/txt', 8000);
+            if (r.ok) contenido = (await r.text()).slice(0, 3500);
+          }
+        }
+        if (!contenido) {
+          const gsheet = url.match(/docs\.google\.com\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+          if (gsheet) {
+            const r = await fetchConTimeout('https://docs.google.com/spreadsheets/d/' + gsheet[1] + '/export?format=csv', 8000);
+            if (r.ok) contenido = (await r.text()).slice(0, 3500);
+          }
+        }
+      } catch {}
+
+      // 2. Jina AI Reader: convierte cualquier URL en texto limpio (sin CORS, gratis)
+      //    Funciona para páginas web, PDFs públicos, artículos, etc.
+      if (!contenido) {
+        try {
+          const jinaUrl = 'https://r.jina.ai/' + url;
+          const r = await fetchConTimeout(jinaUrl, 15000);
+          if (r.ok) {
+            const texto = await r.text();
+            contenido = texto.replace(/\s+/g, ' ').trim().slice(0, 3500);
+            if (!contenido || contenido.length < 50) contenido = null; // descartar si muy vacío
+          }
+        } catch {}
+      }
+
+      urlContenidoCache[url] = contenido;
+      return contenido;
+    }
+
+    /* ── Recolectar y fetchear todas las URLs del portal ── */
+    async function buildContextoUrls() {
+      const urlsMap = new Map(); // url → etiqueta
+
+      // URLs de tareas (en memoria)
+      eventsData.forEach(task => {
+        (task.urls || []).forEach(url => {
+          if (url && !urlsMap.has(url))
+            urlsMap.set(url, 'Tarea "' + task.nombre + '"');
+        });
+      });
+
+      // URLs de tareas (localStorage, fallback y complemento)
+      try {
+        const tareasLS = JSON.parse(localStorage.getItem('portal_tareas') || '[]');
+        tareasLS.forEach(task => {
+          (task.urls || []).forEach(url => {
+            if (url && !urlsMap.has(url))
+              urlsMap.set(url, 'Tarea "' + (task.nombre || task.title || '?') + '"');
+          });
+        });
+      } catch {}
+
+      // URLs de apuntes (localStorage)
+      try {
+        const apuntes = JSON.parse(localStorage.getItem('portal_apuntes') || '{}');
+        Object.entries(apuntes).forEach(([materia, items]) => {
+          (items || []).forEach(ap => {
+            if ((ap.tipo === 'url' || ap.tipo === 'gdoc') && ap.url && !urlsMap.has(ap.url))
+              urlsMap.set(ap.url, 'Apunte de ' + materia + ' (' + ap.nombre + ')');
+          });
+        });
+      } catch {}
+
+      if (!urlsMap.size) return { textoModelo: '', exitosos: [], fallidos: [] };
+
+      // Fetch en paralelo
+      const resultados = await Promise.all(
+        [...urlsMap.entries()].map(async ([url, label]) => {
+          const c = await fetchUrlContenido(url);
+          return c ? { url, label, contenido: c } : null;
+        })
+      );
+
+      const exitosos = resultados.filter(Boolean);
+      const fallidos = [...urlsMap.keys()].filter(u => !resultados.find(r => r && r.url === u));
+
+      // Devolvemos: { texto para el modelo, resumen para mostrar al usuario }
+      const textoModelo = exitosos.length
+        ? exitosos.map(r => '=== CONTENIDO DE ' + r.label + ' ===\nURL: ' + r.url + '\n' + r.contenido).join('\n\n')
+        : '';
+
+      return { textoModelo, exitosos, fallidos };
+    }
+
     /* ── Enviar mensaje al chat ── */
     async function enviarMensajePanel() {
       const texto = iaPanelInput.value.trim();
       if (!texto || chatBusy) return;
+
+      // Comando de debug: muestra el contexto que la IA está recibiendo
+      if (texto.trim() === '!debug') {
+        iaPanelInput.value = '';
+        addMsg('!debug', 'user');
+        const ctx = getPortalContext();
+        const lsRaw = localStorage.getItem('portal_tareas') || '[]';
+        let lsResumen = '';
+        try {
+          const ls = JSON.parse(lsRaw);
+          lsResumen = ls.map(t => `${t.nombre}: ${(t.urls||[]).length} urls, ${(t.archivos||[]).length} archivos`).join('\n');
+        } catch { lsResumen = 'error al leer'; }
+        const msg = addMsg('--- CONTEXTO DEL PORTAL ---\n' + ctx + '\n\n--- TAREAS EN LOCALSTORAGE ---\n' + lsResumen, 'bot');
+        msg.style.whiteSpace = 'pre-wrap';
+        msg.style.fontSize = '0.75rem';
+        return;
+      }
 
       chatBusy = true;
       iaPanelSend.disabled = true;
@@ -800,18 +1199,58 @@ REGLAS:
       addMsg(texto, 'user');
       chatHistory.push({ role: 'user', content: texto });
 
-      const thinking = addMsg('Pensando...', 'bot thinking');
+      const thinking = addMsg('Accediendo a recursos...', 'bot thinking');
 
       try {
+        // Obtener contenido de URLs y imágenes en paralelo
+        const [urlsResult, imagenes] = await Promise.all([
+          buildContextoUrls(),
+          Promise.resolve(getImagenesDisponibles()),
+        ]);
+        const urlsContext = urlsResult ? urlsResult.textoModelo : '';
+
+        // Mostrar indicador de recursos leídos
+        if (urlsResult && (urlsResult.exitosos.length || urlsResult.fallidos.length)) {
+          const partes = [];
+          if (urlsResult.exitosos.length)
+            partes.push('Leídos: ' + urlsResult.exitosos.map(r => r.url.replace(/^https?:\/\//, '').slice(0, 40) + '…').join(', '));
+          if (urlsResult.fallidos.length)
+            partes.push('No accesibles (privados o bloqueados): ' + urlsResult.fallidos.map(u => u.replace(/^https?:\/\//, '').slice(0, 40) + '…').join(', '));
+          const infoMsg = addMsg('Recursos: ' + partes.join(' | '), 'bot accion-ok');
+          infoMsg.style.fontSize = '0.78rem';
+          infoMsg.style.opacity = '0.75';
+        }
+
+        const usarVision = imagenes.length > 0;
+        const model = usarVision
+          ? 'meta-llama/llama-4-scout-17b-16e-instruct'
+          : 'llama-3.3-70b-versatile';
+
+        // System prompt con contexto del portal (no va en el mensaje del usuario)
+        const portalSnapshot = getPortalContext();
+        const systemContent = getSystemPrompt(urlsContext, portalSnapshot);
+
+        // Construir mensajes
+        const mensajes = [{ role: 'system', content: systemContent }];
+        chatHistory.slice(0, -1).forEach(m => mensajes.push(m));
+
+        // Mensaje del usuario — limpio, sin datos del portal pegados
+        if (usarVision) {
+          const contenido = [{ type: 'text', text: texto }];
+          imagenes.forEach(img => {
+            contenido.push({ type: 'image_url', image_url: { url: img.dataUrl } });
+          });
+          mensajes.push({ role: 'user', content: contenido });
+        } else {
+          mensajes.push({ role: 'user', content: texto });
+        }
+
+        thinking.textContent = 'Pensando...';
+
         const resp = await fetch(WORKER_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: 'llama-3.3-70b-versatile',
-            messages: [{ role: 'system', content: getSystemPrompt() }, ...chatHistory],
-            max_tokens: 1024,
-            temperature: 0.7,
-          }),
+          body: JSON.stringify({ model, messages: mensajes, max_tokens: 1024, temperature: 0.7 }),
         });
 
         const data = await resp.json();
@@ -820,12 +1259,12 @@ REGLAS:
 
         const textoLimpio = respuesta.replace(/@@ACCION:\{[^@]+\}@@/g, '').trim();
         thinking.className = 'ia-msg bot';
-        thinking.textContent = textoLimpio;
+        thinking.innerHTML = renderMd(textoLimpio);
         iaPanelMessages.scrollTop = iaPanelMessages.scrollHeight;
 
         const resultados = parsearYEjecutar(respuesta);
         resultados.forEach(r => {
-          const conf = addMsg(r, 'bot accion-ok');
+          addMsg(r, 'bot accion-ok');
           iaPanelMessages.scrollTop = iaPanelMessages.scrollHeight;
         });
       } catch(e) {

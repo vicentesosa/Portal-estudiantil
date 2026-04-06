@@ -196,7 +196,7 @@ function actualizarEventosList() {
           <span class="ev-month">${monthName}</span>
         </div>
         <div class="ev-info">
-          <h4>${taskLink(item.nombre, item.url)}</h4>
+          <h4>${taskLink(item.nombre, (item.urls||[])[0]||item.url||'')}</h4>
           <p><i class="fas fa-book"></i> ${escHtml(item.materia)}</p>
         </div>
         <span class="ev-pill task-pill">Tarea</span>`;
@@ -264,6 +264,47 @@ function actualizarStats() {
   if (qApu) qApu.textContent = numApuntes > 0
     ? numApuntes + (numApuntes === 1 ? ' apunte guardado' : ' apuntes guardados')
     : 'Sin apuntes guardados';
+
+  // ── Hero badges ──
+  const en7 = new Date(hoy); en7.setDate(en7.getDate() + 7);
+
+  const badgeTareas = document.getElementById('heroBadgeTareas');
+  if (badgeTareas) {
+    if (pendientes > 0) {
+      badgeTareas.className = 'badge badge-warning';
+      badgeTareas.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${pendientes} tarea${pendientes > 1 ? 's' : ''} pendiente${pendientes > 1 ? 's' : ''}`;
+    } else {
+      badgeTareas.className = 'badge badge-success';
+      badgeTareas.innerHTML = '<i class="fas fa-check-circle"></i> Sin tareas pendientes';
+    }
+  }
+
+  const examenesProximos = examenesData.filter(e => e.vence >= hoy && e.vence <= en7).length;
+  const badgeEventos = document.getElementById('heroBadgeEventos');
+  if (badgeEventos) {
+    if (examenesProximos > 0) {
+      badgeEventos.className = 'badge badge-warning';
+      badgeEventos.innerHTML = `<i class="fas fa-calendar-alt"></i> ${examenesProximos} examen${examenesProximos > 1 ? 'es' : ''} esta semana`;
+    } else if (proximosExamenes > 0) {
+      badgeEventos.className = 'badge badge-info';
+      badgeEventos.innerHTML = `<i class="fas fa-calendar-alt"></i> ${proximosExamenes} examen${proximosExamenes > 1 ? 'es' : ''} próximo${proximosExamenes > 1 ? 's' : ''}`;
+    } else {
+      badgeEventos.className = 'badge badge-success';
+      badgeEventos.innerHTML = '<i class="fas fa-calendar-check"></i> Sin eventos esta semana';
+    }
+  }
+
+  const numProyectos = document.querySelectorAll('#page-proyectos .proy-card').length;
+  const badgeProyectos = document.getElementById('heroBadgeProyectos');
+  if (badgeProyectos) {
+    if (numProyectos > 0) {
+      badgeProyectos.className = 'badge badge-info';
+      badgeProyectos.innerHTML = `<i class="fas fa-project-diagram"></i> ${numProyectos} proyecto${numProyectos > 1 ? 's' : ''} activo${numProyectos > 1 ? 's' : ''}`;
+    } else {
+      badgeProyectos.className = 'badge badge-success';
+      badgeProyectos.innerHTML = '<i class="fas fa-star"></i> Sin proyectos activos';
+    }
+  }
 }
 
 function actualizarActividadesSemana() {
@@ -273,7 +314,7 @@ function actualizarActividadesSemana() {
 
   const tareas = eventsData
     .filter(e => !e.completada && e.vence >= hoy && e.vence <= en7)
-    .map(e => ({ titulo: e.nombre, materia: e.materia, vence: e.vence, url: e.url, _tipo: 'tarea' }));
+    .map(e => ({ titulo: e.nombre, materia: e.materia, vence: e.vence, url: (e.urls||[])[0]||e.url||'', _tipo: 'tarea' }));
 
   const examenes = examenesData
     .filter(e => e.vence >= hoy && e.vence <= en7)
@@ -296,11 +337,11 @@ function actualizarActividadesSemana() {
   proximas.forEach(({ titulo, materia, vence, url, links, _tipo }) => {
     url = url || (links && links[0] && links[0].url) || '';
     const diff    = Math.round((vence - hoy) / 86400000);
-    const dot     = diff <= 2 ? 'red' : 'orange';
+    const dot     = diff <= 1 ? 'red' : 'orange';
     const when    = diff === 0 ? 'Hoy' : diff === 1 ? 'Mañana' : `En ${diff} días`;
     const isExam  = _tipo === 'examen';
-    const statCls = diff <= 2 ? 'exam-st' : 'upcoming';
-    const statLbl = isExam ? 'Examen' : (diff <= 2 ? 'Urgente' : 'Esta semana');
+    const statCls = diff <= 1 ? 'exam-st' : 'upcoming';
+    const statLbl = isExam ? 'Examen' : (diff <= 1 ? 'Urgente' : 'Pendiente');
     const item = document.createElement('div');
     item.className = 'act-item';
     item.innerHTML = `
@@ -353,10 +394,20 @@ function construirApuntes() {
     addBtn.addEventListener('click', e => {
       e.stopPropagation();
       apunteTargetRow = row;
+      const isOpen = apunteDropdown.classList.contains('open');
+      if (isOpen) {
+        apunteDropdown.classList.remove('open', 'open-up');
+        return;
+      }
       const rect = addBtn.getBoundingClientRect();
-      apunteDropdown.style.top  = (rect.bottom + 6) + 'px';
+      const ddH  = apunteDropdown.offsetHeight || 130;
+      const openUp = (window.innerHeight - rect.bottom) < ddH + 10;
+      apunteDropdown.classList.toggle('open-up', openUp);
+      apunteDropdown.style.top  = openUp
+        ? (rect.top - ddH - 6) + 'px'
+        : (rect.bottom + 6) + 'px';
       apunteDropdown.style.left = Math.min(rect.right - 210, window.innerWidth - 220) + 'px';
-      apunteDropdown.classList.toggle('open');
+      apunteDropdown.classList.add('open');
     });
 
     row.innerHTML = `
@@ -460,14 +511,14 @@ function restaurarApuntesEnRow(row, items) {
 // Cerrar dropdown al hacer click fuera
 document.addEventListener('click', e => {
   if (!e.target.closest('.apunte-add-btn') && !e.target.closest('#apunteDropdown'))
-    apunteDropdown.classList.remove('open');
+    apunteDropdown.classList.remove('open', 'open-up');
 });
 
 // Items del dropdown → acción según tipo
 document.querySelectorAll('.apunte-dropdown-item').forEach(btn => {
   btn.addEventListener('click', () => {
     apunteTipo = btn.dataset.tipo;
-    apunteDropdown.classList.remove('open');
+    apunteDropdown.classList.remove('open', 'open-up');
 
     // Documento de Google → abre docs.new y luego muestra el modal para pegar el link
     if (apunteTipo === 'gdoc') {
@@ -564,6 +615,11 @@ document.getElementById('ctxApunteDelete').addEventListener('click', () => {
   ctxMenuApunte.classList.remove('open');
   if (!ctxApunteTarget) return;
   const row = ctxApunteTarget.closest('.apunte-row');
+
+  // Si es una nota propia, eliminar también su contenido de localStorage
+  const noteId = ctxApunteTarget.dataset.noteId;
+  if (noteId) localStorage.removeItem('apunte_' + noteId);
+
   ctxApunteTarget.remove();
   if (row) {
     // Eliminar etiquetas de categoría que quedaron sin ítems
@@ -831,7 +887,8 @@ function abrirDetalleMateria(card) {
   if (pendientes.length > 0) {
     html += `<div class="detalle-section-title"><i class="fas fa-tasks"></i> &nbsp;Tareas pendientes</div>
     <ul class="detalle-tareas-list">`;
-    pendientes.sort((a, b) => a.vence - b.vence).forEach(({ nombre: nt, vence, url }) => {
+    pendientes.sort((a, b) => a.vence - b.vence).forEach(({ nombre: nt, vence, url, urls }) => {
+      url = (urls||[])[0] || url || '';
       const diff = Math.round((vence - hoy) / 86400000);
       const cuando = diff === 0 ? 'Vence hoy' : diff === 1 ? 'Vence mañana'
         : diff <= 7 ? `En ${diff} días`
@@ -855,7 +912,8 @@ function abrirDetalleMateria(card) {
   if (entregadasArr.length > 0) {
     html += `<div class="detalle-section-title" style="margin-top:1.2rem"><i class="fas fa-check-double"></i> &nbsp;Entregadas</div>
     <ul class="detalle-tareas-list">`;
-    entregadasArr.forEach(({ nombre: nt, vence, url }) => {
+    entregadasArr.forEach(({ nombre: nt, vence, url, urls }) => {
+      url = (urls||[])[0] || url || '';
       const fechaStr = vence.toLocaleDateString('es-AR', { day:'numeric', month:'long' });
       html += `
         <li class="detalle-tarea-item detalle-tarea-done">
@@ -889,25 +947,104 @@ modalDetalle.addEventListener('click', e => { if (e.target === modalDetalle) cer
 document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarDetalleMateria(); });
 
 // ===== MODAL NUEVA TAREA =====
-const modalTarea   = document.getElementById('modalTarea');
-const tareaNombre  = document.getElementById('tareaNombre');
-const tareaMateria = document.getElementById('tareaMateria');
-const tareaFecha   = document.getElementById('tareaFecha');
-const tareaUrl     = document.getElementById('tareaUrl');
-const tareaArchivo = document.getElementById('tareaArchivo');
-const tareaFileName = document.getElementById('tareaFileName');
+const modalTarea    = document.getElementById('modalTarea');
+const tareaNombre   = document.getElementById('tareaNombre');
+const tareaMateria  = document.getElementById('tareaMateria');
+const tareaFecha    = document.getElementById('tareaFecha');
+const tareaUrlsCont = document.getElementById('tareaUrlsContainer');
+const tareaArchivo  = document.getElementById('tareaArchivo');
+const tareaFileName  = document.getElementById('tareaFileName');
 const tareaFileLabel = document.getElementById('tareaFileLabel');
 let tareaArchivoData = null; // { name, dataUrl, type }
 
+async function extraerTextoPDF(dataUrl) {
+  if (typeof pdfjsLib === 'undefined') return '';
+  try {
+    const base64 = dataUrl.split(',')[1];
+    const binary = atob(base64);
+    const bytes  = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const pdf  = await pdfjsLib.getDocument({ data: bytes }).promise;
+    let texto  = '';
+    for (let i = 1; i <= Math.min(pdf.numPages, 20); i++) {
+      const page    = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      texto += content.items.map(it => it.str).join(' ') + '\n';
+    }
+    return texto.trim();
+  } catch { return ''; }
+}
+
 tareaArchivo.addEventListener('change', () => {
   const file = tareaArchivo.files[0];
-  if (!file) { tareaArchivoData = null; tareaFileName.textContent = 'Seleccionar archivo...'; tareaFileLabel.classList.remove('has-file'); return; }
+  if (!file) {
+    tareaArchivoData = null;
+    tareaFileName.textContent = 'Seleccionar archivo...';
+    tareaFileLabel.classList.remove('has-file');
+    return;
+  }
   tareaFileName.textContent = file.name;
   tareaFileLabel.classList.add('has-file');
   const reader = new FileReader();
-  reader.onload = e => { tareaArchivoData = { name: file.name, dataUrl: e.target.result, type: file.type }; };
+  reader.onload = async (e) => {
+    const dataUrl = e.target.result;
+    let textoExtraido = '';
+    if (file.type === 'application/pdf') {
+      textoExtraido = await extraerTextoPDF(dataUrl);
+    } else if (file.type.startsWith('text/')) {
+      try { textoExtraido = atob(dataUrl.split(',')[1]); } catch {}
+    }
+    tareaArchivoData = { name: file.name, dataUrl, type: file.type, textoExtraido };
+  };
   reader.readAsDataURL(file);
 });
+
+// ── Gestión de filas de URL en el modal ──
+function crearUrlRow(value) {
+  const row = document.createElement('div');
+  row.className = 'tarea-url-row';
+  row.innerHTML = `
+    <input class="modal-input tarea-url-input" type="url" placeholder="https://..." autocomplete="off" value="${escHtml(value || '')}"/>
+    <button type="button" class="tarea-url-btn remove-btn" title="Quitar URL"><i class="fas fa-minus"></i></button>
+    <button type="button" class="tarea-url-btn add-btn" title="Agregar otra URL"><i class="fas fa-plus"></i></button>
+  `;
+  row.querySelector('.add-btn').addEventListener('click', () => {
+    tareaUrlsCont.appendChild(crearUrlRow(''));
+    sincronizarBotonesUrl();
+    tareaUrlsCont.lastElementChild.querySelector('.tarea-url-input').focus();
+  });
+  row.querySelector('.remove-btn').addEventListener('click', () => {
+    row.remove();
+    sincronizarBotonesUrl();
+  });
+  return row;
+}
+
+function sincronizarBotonesUrl() {
+  const rows = tareaUrlsCont.querySelectorAll('.tarea-url-row');
+  rows.forEach((r, i) => {
+    r.querySelector('.remove-btn').style.display = rows.length > 1 ? '' : 'none';
+  });
+}
+
+function resetUrlRows() {
+  tareaUrlsCont.innerHTML = '';
+  tareaUrlsCont.appendChild(crearUrlRow(''));
+  sincronizarBotonesUrl();
+}
+
+function recogerUrls() {
+  const urls = [];
+  tareaUrlsCont.querySelectorAll('.tarea-url-input').forEach(inp => {
+    const raw = inp.value.trim();
+    if (!raw) return;
+    try {
+      const u = new URL(raw);
+      if (u.protocol === 'http:' || u.protocol === 'https:') urls.push(raw);
+    } catch {}
+  });
+  return urls;
+}
 
 // Columnas de tareas
 const colUrgentes  = document.querySelector('.tareas-cols .tareas-col:nth-child(1) .task-list');
@@ -928,7 +1065,7 @@ function openModalTarea() {
   tareaFecha.min   = new Date().toISOString().split('T')[0];
   tareaFecha.value = '';
   tareaNombre.value = '';
-  tareaUrl.value = '';
+  resetUrlRows();
   tareaArchivo.value = '';
   tareaArchivoData = null;
   tareaFileName.textContent = 'Seleccionar archivo...';
@@ -950,19 +1087,257 @@ tareaNombre.addEventListener('keydown', e => { if (e.key === 'Enter') crearTarea
 
 let tareaIdCounter = 100;
 
+// ===== MODAL DETALLE TAREA (click izquierdo en tarea) =====
+const modalDetalleTarea = document.getElementById('modalDetalleTarea');
+let dtTaskEntry = null, dtLi = null, dtLista = null, dtEsUrgente = false, dtDotColor = '', dtVenceTexto = '';
+
+function renderDtArchivos() {
+  const cont = document.getElementById('dtArchivos');
+  cont.innerHTML = '';
+  const urls    = dtTaskEntry.urls    || [];
+  const archivos = dtTaskEntry.archivos || [];
+  if (urls.length === 0 && archivos.length === 0) return;
+  urls.forEach(u => {
+    const div = document.createElement('div');
+    div.className = 'dt-archivo-item';
+    div.innerHTML = `<i class="fas fa-link"></i><a href="${escHtml(u)}" target="_blank" rel="noopener noreferrer">${escHtml(u)}</a>`;
+    cont.appendChild(div);
+  });
+  archivos.forEach(a => {
+    const div = document.createElement('div');
+    div.className = 'dt-archivo-item';
+    if (a.dataUrl) {
+      const isImg = a.type?.startsWith('image/');
+      const iconos = { 'application/pdf':'fa-file-pdf','application/vnd.openxmlformats-officedocument.presentationml.presentation':'fa-file-powerpoint','application/msword':'fa-file-word','application/vnd.openxmlformats-officedocument.wordprocessingml.document':'fa-file-word','application/vnd.ms-excel':'fa-file-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'fa-file-excel' };
+      const ico = isImg ? 'fa-image' : (iconos[a.type] || 'fa-file-alt');
+      div.innerHTML = `<i class="fas ${ico}"></i><a href="${a.dataUrl}" download="${escHtml(a.name)}">${escHtml(a.name)}</a>`;
+    } else {
+      div.innerHTML = `<i class="fas fa-paperclip"></i><span style="color:var(--muted)">${escHtml(a.name)}</span>`;
+    }
+    cont.appendChild(div);
+  });
+}
+
+function abrirDetalleTarea(taskEntry, li, lista, esUrgente, dotColor, venceTexto) {
+  dtTaskEntry = taskEntry; dtLi = li; dtLista = lista;
+  dtEsUrgente = esUrgente; dtDotColor = dotColor; dtVenceTexto = venceTexto;
+  document.getElementById('dtNombre').textContent  = taskEntry.nombre;
+  document.getElementById('dtMateria').textContent = taskEntry.materia;
+  document.getElementById('dtFecha').textContent   = venceTexto;
+  renderDtArchivos();
+  // Ocultar paneles inline
+  document.getElementById('dtRenombrarBox').style.display = 'none';
+  document.getElementById('dtUrlBox').style.display = 'none';
+  modalDetalleTarea.classList.add('open');
+}
+
+function cerrarDetalleTarea() { modalDetalleTarea.classList.remove('open'); }
+
+document.getElementById('dtClose').addEventListener('click', cerrarDetalleTarea);
+modalDetalleTarea.addEventListener('click', e => { if (e.target === modalDetalleTarea) cerrarDetalleTarea(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalDetalleTarea.classList.contains('open')) cerrarDetalleTarea(); });
+
+// ── Cambiar nombre ──
+document.getElementById('dtRenombrar').addEventListener('click', () => {
+  const box = document.getElementById('dtRenombrarBox');
+  document.getElementById('dtUrlBox').style.display = 'none';
+  box.style.display = box.style.display === 'none' ? '' : 'none';
+  if (box.style.display !== 'none') {
+    document.getElementById('dtRenombrarInput').value = dtTaskEntry.nombre;
+    document.getElementById('dtRenombrarInput').focus();
+  }
+});
+document.getElementById('dtRenombrarCancelar').addEventListener('click', () => {
+  document.getElementById('dtRenombrarBox').style.display = 'none';
+});
+document.getElementById('dtRenombrarGuardar').addEventListener('click', () => {
+  const nuevo = document.getElementById('dtRenombrarInput').value.trim();
+  if (!nuevo) return;
+  dtTaskEntry.nombre = nuevo;
+  document.getElementById('dtNombre').textContent = nuevo;
+  document.getElementById('dtRenombrarBox').style.display = 'none';
+  // Actualizar li
+  const body = dtLi.querySelector('.task-body');
+  if (body) body.innerHTML = buildTaskBodyHtml(dtTaskEntry, dtVenceTexto);
+  actualizarEventosList(); actualizarActividadesSemana(); guardarPortalData(); refrescarDetalleMateria?.();
+});
+
+// ── Agregar URL ──
+document.getElementById('dtAgregarUrl').addEventListener('click', () => {
+  const box = document.getElementById('dtUrlBox');
+  document.getElementById('dtRenombrarBox').style.display = 'none';
+  box.style.display = box.style.display === 'none' ? '' : 'none';
+  if (box.style.display !== 'none') {
+    document.getElementById('dtUrlInput').value = '';
+    document.getElementById('dtUrlInput').focus();
+  }
+});
+document.getElementById('dtUrlCancelar').addEventListener('click', () => {
+  document.getElementById('dtUrlBox').style.display = 'none';
+});
+document.getElementById('dtUrlGuardar').addEventListener('click', () => {
+  const raw = document.getElementById('dtUrlInput').value.trim();
+  if (!raw) return;
+  let valid = '';
+  try { const u = new URL(raw); if (u.protocol === 'http:' || u.protocol === 'https:') valid = raw; } catch {}
+  if (!valid) { document.getElementById('dtUrlInput').focus(); return; }
+  dtTaskEntry.urls = [...(dtTaskEntry.urls || []), valid];
+  document.getElementById('dtUrlBox').style.display = 'none';
+  renderDtArchivos();
+  const body = dtLi.querySelector('.task-body');
+  if (body) body.innerHTML = buildTaskBodyHtml(dtTaskEntry, dtVenceTexto);
+  guardarPortalData();
+});
+
+// ── Agregar archivo ──
+const dtArchivoInput = document.getElementById('dtArchivoInput');
+document.getElementById('dtAgregarArchivo').addEventListener('click', () => {
+  dtArchivoInput.value = '';
+  dtArchivoInput.click();
+});
+dtArchivoInput.addEventListener('change', () => {
+  const file = dtArchivoInput.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const a = { name: file.name, type: file.type, dataUrl: ev.target.result };
+    dtTaskEntry.archivos = [...(dtTaskEntry.archivos || []), a];
+    if (a.type.startsWith('image/')) {
+      try { localStorage.setItem('portal_archivo_' + dtTaskEntry.id + '_' + dtTaskEntry.archivos.length, a.dataUrl); } catch {}
+    }
+    renderDtArchivos();
+    const body = dtLi.querySelector('.task-body');
+    if (body) body.innerHTML = buildTaskBodyHtml(dtTaskEntry, dtVenceTexto);
+    guardarPortalData();
+  };
+  reader.readAsDataURL(file);
+});
+
+// ── Eliminar tarea ──
+document.getElementById('dtEliminar').addEventListener('click', () => {
+  cerrarDetalleTarea();
+  setTimeout(() => {
+    dtLi.remove();
+    const idx = eventsData.indexOf(dtTaskEntry);
+    if (idx !== -1) eventsData.splice(idx, 1);
+
+    // Limpiar TODOS los datos de localStorage asociados a esta tarea
+    const tid = dtTaskEntry.id;
+    const keysToDelete = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && (k === 'portal_archivo_' + tid || k === 'portal_archivo_texto_' + tid || k.startsWith('portal_archivo_' + tid + '_'))) {
+        keysToDelete.push(k);
+      }
+    }
+    keysToDelete.forEach(k => localStorage.removeItem(k));
+
+    if (dtTaskEntry.completada) {
+      doneCount = Math.max(0, doneCount - 1);
+      doneCountEl.textContent = doneCount;
+      if (!doneList.querySelector('.task-item')) {
+        const msg = document.createElement('li');
+        msg.className = 'no-tasks-msg';
+        msg.innerHTML = '<i class="fas fa-inbox"></i> Nada completado aún';
+        doneList.appendChild(msg);
+      }
+    } else {
+      if (!dtLista.querySelector('.task-item')) {
+        const msg = document.createElement('li');
+        msg.className = 'no-tasks-msg';
+        msg.innerHTML = dtEsUrgente ? '<i class="fas fa-check"></i> Sin urgentes' : '<i class="fas fa-check"></i> Sin tareas esta semana';
+        dtLista.appendChild(msg);
+      }
+    }
+    actualizarCounts(); actualizarEventosList(); actualizarActividadesSemana();
+    buildCalendar(calYear, calMonth); refrescarDetalleMateria?.();
+    guardarPortalData();
+  }, 100);
+});
+
+// ── Helper: HTML para adjuntos (URLs + archivos) en la tarjeta ──
+function buildArchivoHtml(archivo) {
+  if (!archivo) return '';
+  if (archivo.type.startsWith('image/')) {
+    return `<div class="task-attachment">
+      <img src="${archivo.dataUrl}" alt="${escHtml(archivo.name)}" title="${escHtml(archivo.name)}"
+           onclick="window.open(this.src,'_blank')"/>
+      <a href="${archivo.dataUrl}" download="${escHtml(archivo.name)}">
+        <i class="fas fa-download"></i>${escHtml(archivo.name)}
+      </a>
+    </div>`;
+  }
+  const iconos = { 'application/pdf':'fa-file-pdf','application/vnd.ms-powerpoint':'fa-file-powerpoint','application/vnd.openxmlformats-officedocument.presentationml.presentation':'fa-file-powerpoint','application/msword':'fa-file-word','application/vnd.openxmlformats-officedocument.wordprocessingml.document':'fa-file-word','application/vnd.ms-excel':'fa-file-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'fa-file-excel' };
+  const ico = iconos[archivo.type] || 'fa-file-alt';
+  return `<div class="task-attachment">
+    <a href="${archivo.dataUrl}" download="${escHtml(archivo.name)}">
+      <i class="fas ${ico}"></i>${escHtml(archivo.name)}
+    </a>
+  </div>`;
+}
+
+function buildTaskBodyHtml(taskEntry, venceTexto) {
+  const primerUrl = (taskEntry.urls || [])[0] || taskEntry.url || '';
+  let html = `<h4>${taskLink(taskEntry.nombre, primerUrl)}</h4>
+    <p><i class="fas fa-book"></i> ${escHtml(taskEntry.materia)} &nbsp;·&nbsp; <i class="fas fa-clock"></i> ${venceTexto}</p>`;
+  (taskEntry.archivos || (taskEntry.archivo ? [taskEntry.archivo] : [])).forEach(a => {
+    html += buildArchivoHtml(a);
+  });
+  return html;
+}
+
+function attachCheckboxHandler(li, lista, esUrgente, taskEntry) {
+  li.querySelector('input[type=checkbox]').addEventListener('change', function() {
+    if (this.checked) {
+      li.classList.add('done-task');
+      setTimeout(() => {
+        li.remove();
+        if (!lista.querySelector('.task-item')) {
+          const msg = document.createElement('li');
+          msg.className = 'no-tasks-msg';
+          msg.innerHTML = esUrgente ? '<i class="fas fa-check"></i> Sin urgentes' : '<i class="fas fa-check"></i> Sin tareas pendientes';
+          lista.appendChild(msg);
+        }
+        const doneMsg = doneList.querySelector('.no-tasks-msg');
+        if (doneMsg) doneMsg.remove();
+        doneList.appendChild(li);
+        doneCount++; doneCountEl.textContent = doneCount;
+        taskEntry.completada = true;
+        actualizarCounts(); refrescarDetalleMateria();
+      }, 280);
+    } else {
+      li.classList.remove('done-task');
+      setTimeout(() => {
+        li.remove();
+        const noMsgDest = lista.querySelector('.no-tasks-msg');
+        if (noMsgDest) noMsgDest.remove();
+        lista.appendChild(li);
+        doneCount--; doneCountEl.textContent = doneCount;
+        if (!doneList.querySelector('.task-item')) {
+          const msg = document.createElement('li');
+          msg.className = 'no-tasks-msg';
+          msg.innerHTML = '<i class="fas fa-inbox"></i> Nada completado aún';
+          doneList.appendChild(msg);
+        }
+        taskEntry.completada = false;
+        actualizarCounts(); refrescarDetalleMateria();
+      }, 280);
+    }
+  });
+}
+
+function attachTaskClickHandler(li, taskEntry, lista, esUrgente, dotColor, venceTexto) {
+  li.addEventListener('click', function(e) {
+    if (e.target.closest('.task-check') || e.target.closest('.task-attachment')) return;
+    abrirDetalleTarea(taskEntry, li, lista, esUrgente, dotColor, venceTexto);
+  });
+}
+
 function crearTarea() {
   const nombre  = tareaNombre.value.trim();
   const materia = tareaMateria.value;
   const fecha   = tareaFecha.value;
-
-  const rawUrl = tareaUrl.value.trim();
-  let url = '';
-  if (rawUrl) {
-    try {
-      const u = new URL(rawUrl);
-      if (u.protocol === 'http:' || u.protocol === 'https:') url = rawUrl;
-    } catch {}
-  }
+  const urls    = recogerUrls();
 
   if (!nombre)  { tareaNombre.focus();  return; }
   if (!materia) { tareaMateria.focus(); return; }
@@ -981,18 +1356,20 @@ function crearTarea() {
     venceTexto = `Vence el ${d}`;
   }
 
-  const esUrgente = diffDias <= 2;
+  const esUrgente = diffDias <= 1;
   const lista     = esUrgente ? colUrgentes : colSemana;
-  const dotColor  = diffDias <= 2 ? 'red' : diffDias <= 7 ? 'orange' : 'yellow';
+  const dotColor  = diffDias <= 1 ? 'red' : diffDias <= 7 ? 'orange' : 'yellow';
 
-  // Objeto de tarea compartido — permite actualizar estado desde cualquier lugar
   const archivo   = tareaArchivoData ? { ...tareaArchivoData } : null;
+  const archivos  = archivo ? [archivo] : [];
   const id        = 't' + tareaIdCounter++;
-  const taskEntry = { id, nombre, materia, vence, url, archivo, completada: false };
+  const taskEntry = { id, nombre, materia, vence, urls, archivos, completada: false };
 
-  // Guardar imagen en localStorage por separado (evita inflar portal_tareas)
   if (archivo?.type?.startsWith('image/') && archivo.dataUrl) {
     try { localStorage.setItem('portal_archivo_' + id, archivo.dataUrl); } catch {}
+  }
+  if (archivo && !archivo.type?.startsWith('image/') && archivo.textoExtraido) {
+    try { localStorage.setItem('portal_archivo_texto_' + id, archivo.textoExtraido); } catch {}
   }
 
   const noMsg = lista.querySelector('.no-tasks-msg');
@@ -1000,84 +1377,18 @@ function crearTarea() {
   const li = document.createElement('li');
   li.className = 'task-item' + (esUrgente ? ' urgent' : '');
   li.id = 'tarea-' + id;
-  const archivoHtml = (() => {
-    if (!archivo) return '';
-    if (archivo.type.startsWith('image/')) {
-      return `<div class="task-attachment">
-        <img src="${archivo.dataUrl}" alt="${escHtml(archivo.name)}" title="${escHtml(archivo.name)}"
-             onclick="window.open(this.src,'_blank')"/>
-        <a href="${archivo.dataUrl}" download="${escHtml(archivo.name)}">
-          <i class="fas fa-download"></i>${escHtml(archivo.name)}
-        </a>
-      </div>`;
-    }
-    const iconos = { 'application/pdf': 'fa-file-pdf', 'application/vnd.ms-powerpoint': 'fa-file-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'fa-file-powerpoint', 'application/msword': 'fa-file-word', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'fa-file-word', 'application/vnd.ms-excel': 'fa-file-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'fa-file-excel' };
-    const ico = iconos[archivo.type] || 'fa-file-alt';
-    return `<div class="task-attachment">
-      <a href="${archivo.dataUrl}" download="${escHtml(archivo.name)}">
-        <i class="fas ${ico}"></i>${escHtml(archivo.name)}
-      </a>
-    </div>`;
-  })();
 
   li.innerHTML = `
     <div class="task-check">
       <input type="checkbox" id="${id}"/>
       <label for="${id}"></label>
     </div>
-    <div class="task-body">
-      <h4>${taskLink(nombre, url)}</h4>
-      <p><i class="fas fa-book"></i> ${escHtml(materia)} &nbsp;·&nbsp; <i class="fas fa-clock"></i> ${venceTexto}</p>
-      ${archivoHtml}
-    </div>
+    <div class="task-body">${buildTaskBodyHtml(taskEntry, venceTexto)}</div>
     <span class="priority-dot ${dotColor}"></span>
   `;
 
-  li.querySelector('input[type=checkbox]').addEventListener('change', function() {
-    if (this.checked) {
-      // ── Marcar como completada ──
-      li.classList.add('done-task');
-      setTimeout(() => {
-        li.remove();
-        if (!lista.querySelector('.task-item')) {
-          const msg = document.createElement('li');
-          msg.className = 'no-tasks-msg';
-          msg.innerHTML = esUrgente
-            ? '<i class="fas fa-check"></i> Sin urgentes'
-            : '<i class="fas fa-check"></i> Sin tareas esta semana';
-          lista.appendChild(msg);
-        }
-        const doneMsg = doneList.querySelector('.no-tasks-msg');
-        if (doneMsg) doneMsg.remove();
-        doneList.appendChild(li);
-        doneCount++;
-        doneCountEl.textContent = doneCount;
-        taskEntry.completada = true;
-        actualizarCounts();
-        refrescarDetalleMateria();
-      }, 280);
-    } else {
-      // ── Desmarcar → volver a la columna original ──
-      li.classList.remove('done-task');
-      setTimeout(() => {
-        li.remove();
-        const noMsgDest = lista.querySelector('.no-tasks-msg');
-        if (noMsgDest) noMsgDest.remove();
-        lista.appendChild(li);
-        doneCount--;
-        doneCountEl.textContent = doneCount;
-        if (!doneList.querySelector('.task-item')) {
-          const msg = document.createElement('li');
-          msg.className = 'no-tasks-msg';
-          msg.innerHTML = '<i class="fas fa-inbox"></i> Nada completado aún';
-          doneList.appendChild(msg);
-        }
-        taskEntry.completada = false;
-        actualizarCounts();
-        refrescarDetalleMateria();
-      }, 280);
-    }
-  });
+  attachCheckboxHandler(li, lista, esUrgente, taskEntry);
+  attachTaskClickHandler(li, taskEntry, lista, esUrgente, dotColor, venceTexto);
 
   lista.appendChild(li);
   eventsData.push(taskEntry);
@@ -1100,15 +1411,16 @@ function guardarPortalData() {
   try {
     // Tareas (incluye nombre de archivo adjunto si hay)
     const tareasSerial = eventsData.map(e => ({
-      id:             e.id || '',
-      nombre:         e.nombre,
-      materia:        e.materia,
-      vence:          e.vence instanceof Date ? e.vence.toISOString().split('T')[0] : e.vence,
-      completada:     e.completada,
-      url:            e.url || '',
-      archivoNombre:  e.archivo?.name  || '',
-      archivoTipo:    e.archivo?.type  || '',
-      archivoEsImagen: e.archivo?.type?.startsWith('image/') || false,
+      id:         e.id || '',
+      nombre:     e.nombre,
+      materia:    e.materia,
+      vence:      e.vence instanceof Date ? e.vence.toISOString().split('T')[0] : e.vence,
+      completada: e.completada,
+      urls:       e.urls || (e.url ? [e.url] : []),
+      archivos:   (e.archivos || (e.archivo ? [e.archivo] : [])).map(a => ({
+        name: a.name, type: a.type,
+        esImagen: a.type?.startsWith('image/') || false,
+      })),
     }));
     localStorage.setItem('portal_tareas', JSON.stringify(tareasSerial));
 
@@ -1432,18 +1744,27 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarDetall
     saved.forEach(t => {
       const vence    = new Date(t.vence + 'T00:00:00');
       const diffDias = Math.round((vence - hoy) / 86400000);
-      const esUrgente = diffDias <= 2;
-      const dotColor  = diffDias <= 2 ? 'red' : diffDias <= 7 ? 'orange' : 'yellow';
+      const esUrgente = diffDias <= 1;
+      const dotColor  = diffDias <= 1 ? 'red' : diffDias <= 7 ? 'orange' : 'yellow';
       let venceTexto;
       if      (diffDias === 0) venceTexto = 'Vence hoy';
       else if (diffDias === 1) venceTexto = 'Vence mañana';
       else if (diffDias <= 7)  venceTexto = `Vence en ${diffDias} días`;
       else { const d = vence.toLocaleDateString('es-AR', { day:'numeric', month:'long' }); venceTexto = `Vence el ${d}`; }
 
-      const id        = t.id || ('t' + tareaIdCounter++);
-      const taskEntry = { id, nombre: t.nombre, materia: t.materia, vence, url: t.url || '', archivo: null, completada: t.completada };
+      const id = t.id || ('t' + tareaIdCounter++);
+      // Migrar formato viejo (url / archivoNombre) al nuevo (urls / archivos)
+      const urls    = t.urls || (t.url ? [t.url] : []);
+      const archivos = (t.archivos || []).map(a => ({
+        name: a.name, type: a.type,
+        dataUrl: a.dataUrl || (a.esImagen ? (localStorage.getItem('portal_archivo_' + id) || '') : '') || '',
+        textoExtraido: (!a.esImagen && !(a.type || '').startsWith('image/'))
+          ? (localStorage.getItem('portal_archivo_texto_' + id) || '') : ''
+      }));
+      const taskEntry = { id, nombre: t.nombre, materia: t.materia, vence, urls, archivos, completada: t.completada };
       eventsData.push(taskEntry);
 
+      const lista = esUrgente ? colUrgentes : colSemana;
       const li = document.createElement('li');
       li.className = 'task-item' + (esUrgente && !t.completada ? ' urgent' : '') + (t.completada ? ' done-task' : '');
       li.id = 'tarea-' + id;
@@ -1452,49 +1773,11 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarDetall
           <input type="checkbox" id="${id}" ${t.completada ? 'checked' : ''}/>
           <label for="${id}"></label>
         </div>
-        <div class="task-body">
-          <h4>${taskLink(t.nombre, t.url)}</h4>
-          <p><i class="fas fa-book"></i> ${escHtml(t.materia)} &nbsp;·&nbsp; <i class="fas fa-clock"></i> ${venceTexto}</p>
-        </div>
+        <div class="task-body">${buildTaskBodyHtml(taskEntry, venceTexto)}</div>
         <span class="priority-dot ${dotColor}"></span>`;
 
-      const lista = esUrgente ? colUrgentes : colSemana;
-
-      li.querySelector('input[type=checkbox]').addEventListener('change', function() {
-        if (this.checked) {
-          li.classList.add('done-task');
-          setTimeout(() => {
-            li.remove();
-            if (!lista.querySelector('.task-item')) {
-              const msg = document.createElement('li'); msg.className = 'no-tasks-msg';
-              msg.innerHTML = esUrgente ? '<i class="fas fa-check"></i> Sin urgentes' : '<i class="fas fa-check"></i> Sin tareas esta semana';
-              lista.appendChild(msg);
-            }
-            const doneMsg = doneList.querySelector('.no-tasks-msg');
-            if (doneMsg) doneMsg.remove();
-            doneList.appendChild(li);
-            doneCount++; doneCountEl.textContent = doneCount;
-            taskEntry.completada = true;
-            actualizarCounts(); refrescarDetalleMateria?.();
-          }, 280);
-        } else {
-          li.classList.remove('done-task');
-          setTimeout(() => {
-            li.remove();
-            const noMsgDest = lista.querySelector('.no-tasks-msg');
-            if (noMsgDest) noMsgDest.remove();
-            lista.appendChild(li);
-            doneCount--; doneCountEl.textContent = doneCount;
-            if (!doneList.querySelector('.task-item')) {
-              const msg = document.createElement('li'); msg.className = 'no-tasks-msg';
-              msg.innerHTML = '<i class="fas fa-inbox"></i> Nada completado aún';
-              doneList.appendChild(msg);
-            }
-            taskEntry.completada = false;
-            actualizarCounts(); refrescarDetalleMateria?.();
-          }, 280);
-        }
-      });
+      attachCheckboxHandler(li, lista, esUrgente, taskEntry);
+      attachTaskClickHandler(li, taskEntry, lista, esUrgente, dotColor, venceTexto);
 
       if (t.completada) {
         const noMsg = doneList.querySelector('.no-tasks-msg');

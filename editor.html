@@ -1319,15 +1319,24 @@ function getPortalContext() {
     if (tareas.length) {
       tareas.forEach((t, i) => {
         let line = `  ${i+1}. [${t.completada ? 'COMPLETADA' : 'PENDIENTE'}] "${t.nombre}" | Materia: ${t.materia} | Vence: ${t.vence}`;
-        if (t.url)           line += ` | URL: ${t.url}`;
-        if (t.archivoNombre) line += ` | Archivo adjunto: ${t.archivoNombre}`;
-        if (t.archivoEsImagen && t.id) {
-          const dataUrl = localStorage.getItem('portal_archivo_' + t.id);
-          if (dataUrl) {
-            line += ` | [IMAGEN ADJUNTA — ver abajo]`;
-            images.push({ label: `Imagen adjunta a tarea "${t.nombre}"`, dataUrl });
+        // Leer urls (formato nuevo: array) con fallback a url (formato viejo: string)
+        const urls = t.urls || (t.url ? [t.url] : []);
+        if (urls.length) line += ` | Links adjuntos (${urls.length}): ${urls.join(', ')}`;
+        // Archivos (formato nuevo: array) con fallback a archivoNombre (formato viejo)
+        const archivos = t.archivos || (t.archivoNombre ? [{ name: t.archivoNombre, esImagen: t.archivoEsImagen }] : []);
+        archivos.forEach(a => {
+          if (a.esImagen || (a.type||'').startsWith('image/')) {
+            const dataUrl = localStorage.getItem('portal_archivo_' + t.id);
+            if (dataUrl) {
+              line += ` | [IMAGEN: ${a.name}]`;
+              images.push({ label: `Imagen adjunta a tarea "${t.nombre}"`, dataUrl });
+            }
+          } else {
+            line += ` | Archivo: ${a.name}`;
+            const texto = localStorage.getItem('portal_archivo_texto_' + t.id);
+            if (texto) line += ` (contenido: ${texto.slice(0, 500)})`;
           }
-        }
+        });
         lines.push(line);
       });
     } else {
@@ -1395,6 +1404,82 @@ function wantsPaste(msg) {
   return /peg[aá]|pon(é|e)?lo|escrib[ií]lo|agrega(lo)?|añad[ií]|en (la hoja|el apunte)|al apunte/i.test(msg);
 }
 
+// ── Fetch de URL con timeout (compatible con todos los navegadores) ──
+function fetchConTimeout(url, ms) {
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(tid));
+}
+
+// ── Cache de contenido de URLs ──
+const urlCache = {};
+
+// ── Leer contenido de una URL via Jina Reader o exportación directa de Google ──
+async function fetchUrlContent(url) {
+  if (urlCache[url] !== undefined) return urlCache[url];
+  let contenido = null;
+  try {
+    // Google Docs
+    const gdoc = url.match(/docs\.google\.com\/document\/d\/([a-zA-Z0-9_-]+)/);
+    if (gdoc) {
+      try {
+        const r = await fetchConTimeout('https://docs.google.com/document/d/' + gdoc[1] + '/export?format=txt', 8000);
+        if (r.ok) contenido = (await r.text()).slice(0, 10000);
+      } catch {}
+    }
+    // Google Slides
+    if (!contenido) {
+      const gs = url.match(/docs\.google\.com\/presentation\/d\/([a-zA-Z0-9_-]+)/);
+      if (gs) {
+        try {
+          const r = await fetchConTimeout('https://docs.google.com/presentation/d/' + gs[1] + '/export/txt', 8000);
+          if (r.ok) contenido = (await r.text()).slice(0, 10000);
+        } catch {}
+      }
+    }
+    // Jina Reader para cualquier otra URL (o si Google falló)
+    if (!contenido) {
+      try {
+        const r = await fetchConTimeout('https://r.jina.ai/' + url, 15000);
+        if (r.ok) {
+          const t = (await r.text()).replace(/\s+/g, ' ').trim().slice(0, 10000);
+          if (t.length > 50) contenido = t;
+        }
+      } catch {}
+    }
+  } catch {}
+  urlCache[url] = contenido;
+  return contenido;
+}
+
+// ── Recolectar y fetchear todas las URLs del portal ──
+async function buildUrlContext() {
+  const urlsMap = new Map();
+  try {
+    const tareas = JSON.parse(localStorage.getItem('portal_tareas') || '[]');
+    tareas.forEach(t => {
+      const urls = t.urls || (t.url ? [t.url] : []);
+      urls.forEach(u => { if (u && !urlsMap.has(u)) urlsMap.set(u, `Tarea "${t.nombre}"`); });
+    });
+  } catch {}
+  try {
+    const apuntes = JSON.parse(localStorage.getItem('portal_apuntes') || '{}');
+    Object.entries(apuntes).forEach(([mat, items]) => {
+      (items || []).forEach(a => {
+        if (a.url && !urlsMap.has(a.url)) urlsMap.set(a.url, `Apunte de ${mat} (${a.nombre})`);
+      });
+    });
+  } catch {}
+  if (!urlsMap.size) return '';
+  const resultados = await Promise.all(
+    [...urlsMap.entries()].map(async ([url, label]) => {
+      const c = await fetchUrlContent(url);
+      return c ? `=== CONTENIDO DE ${label} ===\nURL: ${url}\n${c}` : null;
+    })
+  );
+  return resultados.filter(Boolean).join('\n\n');
+}
+
 async function sendAiMessage() {
   const text = aiInput.value.trim();
   if (!text) return;
@@ -1409,42 +1494,44 @@ async function sendAiMessage() {
   conv.messages.push({ role: 'user', content: text });
   addAiBubble(text, 'user');
 
-  const noteText         = editor.innerText.trim().slice(0, 1200);
+  const thinkingBubble = addAiBubble('Accediendo a recursos…', 'bot');
+  thinkingBubble.classList.add('thinking');
+
+  const noteText = editor.innerText.trim().slice(0, 1200);
   const { text: portalCtxText, images: portalImages } = getPortalContext();
-  const hasImages        = portalImages.length > 0;
 
-  const systemCtx = `Sos un asistente de estudio integrado en el Portal Estudiantil. Tenés acceso COMPLETO y en tiempo real a todos los datos del portal del usuario. A continuación están TODOS los datos actuales:
+  // Fetchear URLs en paralelo con Jina Reader
+  const urlsContext = await buildUrlContext();
 
-${portalCtxText}
-${noteText ? `\n=== APUNTE ACTUAL QUE ESTÁ ESCRIBIENDO ===\n${noteText}` : ''}
+  const hasImages = portalImages.length > 0;
 
-INSTRUCCIONES:
-- Los datos de arriba son reales y actuales — úsalos directamente en tus respuestas.
-- Si el usuario pregunta por una tarea, buscala en la lista de TAREAS y respondé sobre ella.
-- Si te piden "resolver" una tarea, analizá el contenido (incluyendo las imágenes adjuntas si las hay) y desarrollá la respuesta completa.
-- Nunca digas que no tenés acceso a datos — ya los tenés todos arriba.
-- Si una sección dice "(ninguna cargada)" es porque el usuario no cargó datos ahí todavía.
+  const systemCtx = `Sos un asistente de estudio integrado en el Portal Estudiantil. Hoy es ${new Date().toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}.
+
+Respondés preguntas sobre las tareas, exámenes y apuntes del portal. El usuario siempre incluye los datos del portal al final de su mensaje. Leé esos datos y respondé en base a ellos.
+- Si hay links en los datos de una tarea, mencionálos.
+- Si hay contenido leído de esos links (sección CONTENIDO LEÍDO), usalo para responder.
 - Respondé siempre en español, directo al punto.`;
 
-  // Construir el mensaje del usuario — con imágenes si las hay
-  const userContent = hasImages
-    ? [
-        { type: 'text', text },
-        ...portalImages.map(img => ({
-          type: 'image_url',
-          image_url: { url: img.dataUrl }
-        }))
-      ]
-    : text;
+  // Inyectar datos directamente en el mensaje del usuario (más efectivo que solo el system prompt)
+  const datosInyectados = '\n\n---\nDATOS ACTUALES DEL PORTAL:\n' + portalCtxText
+    + (noteText ? '\n\nAPUNTE ACTUAL:\n' + noteText : '')
+    + (urlsContext ? '\n\nCONTENIDO LEÍDO DE LOS LINKS:\n' + urlsContext : '');
 
   // Modelo: visión si hay imágenes, texto si no
   const model = hasImages ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.3-70b-versatile';
 
-  const thinkingBubble = addAiBubble('Pensando…', 'bot');
-  thinkingBubble.classList.add('thinking');
+  // Construir el mensaje del usuario — con imágenes si las hay, siempre con datos inyectados
+  const userContent = hasImages
+    ? [
+        { type: 'text', text: text + datosInyectados },
+        ...portalImages.map(img => ({ type: 'image_url', image_url: { url: img.dataUrl } }))
+      ]
+    : text + datosInyectados;
 
-  // Historial previo como texto (los últimos 10 sin contar el mensaje actual)
+  // Historial previo (últimos 10 sin el mensaje actual)
   const history = conv.messages.slice(-11, -1).map(m => ({ role: m.role, content: m.content }));
+
+  thinkingBubble.textContent = 'Pensando…';
 
   try {
     const res = await fetch(WORKER_URL, {
