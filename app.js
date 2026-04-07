@@ -1,3 +1,24 @@
+// ===== LONG PRESS (touch) =====
+// Permite abrir menús de contexto con toque prolongado en táctil
+function addLongPress(el, callback, ms = 600) {
+  let timer = null;
+  let moved = false;
+  el.addEventListener('touchstart', e => {
+    moved = false;
+    const t = e.touches[0];
+    timer = setTimeout(() => {
+      if (!moved) {
+        // Vibrar levemente si el dispositivo lo soporta
+        if (navigator.vibrate) navigator.vibrate(40);
+        callback(t.clientX, t.clientY);
+      }
+    }, ms);
+  }, { passive: true });
+  el.addEventListener('touchmove',   () => { moved = true; clearTimeout(timer); }, { passive: true });
+  el.addEventListener('touchend',    () => clearTimeout(timer), { passive: true });
+  el.addEventListener('touchcancel', () => clearTimeout(timer), { passive: true });
+}
+
 // ===== FECHA DE HOY =====
 const DIAS  = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 const MESES = ['enero','febrero','marzo','abril','mayo','junio',
@@ -237,6 +258,7 @@ function actualizarEventosList() {
     }
 
     ev.addEventListener('contextmenu', e => openCtxCalEvento(e, ev));
+    addLongPress(ev, (x, y) => openCtxCalEvento({ clientX: x, clientY: y }, ev));
     eventsList.appendChild(ev);
   });
 }
@@ -247,8 +269,8 @@ const ctxCalEvento = document.getElementById('ctxCalEvento');
 let ctxCalTarget = null;
 
 function openCtxCalEvento(e, ev) {
-  e.preventDefault();
-  e.stopPropagation();
+  if (e.preventDefault) e.preventDefault();
+  if (e.stopPropagation) e.stopPropagation();
   ctxCalTarget = ev;
   const tipo = ev._tipo;
   const labels = { tarea: 'tarea', examen: 'examen', proyecto: 'proyecto' };
@@ -674,6 +696,7 @@ function crearItemEl(data) {
     itemEl.innerHTML = `<i class="${icon}"></i><a href="${escHtml(data.url)}" target="_blank" rel="noopener noreferrer">${escHtml(data.nombre)}</a>`;
   }
   itemEl.addEventListener('contextmenu', e => openCtxApunte(e, itemEl));
+  addLongPress(itemEl, (x, y) => openCtxApunte({ clientX: x, clientY: y }, itemEl));
   return itemEl;
 }
 
@@ -814,7 +837,7 @@ const ctxMenuApunte  = document.getElementById('ctxMenuApunte');
 let ctxApunteTarget  = null; // el .apunte-item sobre el que se hizo clic derecho
 
 function openCtxApunte(e, itemEl) {
-  e.preventDefault();
+  if (e.preventDefault) e.preventDefault();
   ctxApunteTarget = itemEl;
   ctxMenuApunte.style.left = Math.min(e.clientX, window.innerWidth  - 180) + 'px';
   ctxMenuApunte.style.top  = Math.min(e.clientY, window.innerHeight - 80)  + 'px';
@@ -907,9 +930,8 @@ const ctxMenu   = document.getElementById('ctxMenu');
 let ctxTarget   = null;   // card sobre la que se hizo clic derecho
 
 function openCtx(e, card) {
-  e.preventDefault();
+  if (e.preventDefault) e.preventDefault();
   ctxTarget = card;
-  // Posicionar
   const x = Math.min(e.clientX, window.innerWidth  - 210);
   const y = Math.min(e.clientY, window.innerHeight - 100);
   ctxMenu.style.left = x + 'px';
@@ -1024,6 +1046,7 @@ function crearCardMateria(nombre) {
     <div class="mat-progress-label"><span>Avance del cuatrimestre</span><span>0%</span></div>
   `;
   card.addEventListener('contextmenu', e => openCtx(e, card));
+  addLongPress(card, (x, y) => openCtx({ clientX: x, clientY: y }, card));
   card.addEventListener('click', () => abrirDetalleMateria(card));
   materiasGrid.appendChild(card);
   materias.push({ nombre, card });
@@ -1772,6 +1795,7 @@ function buildExamenCard(entry) {
   actualizarLinksCountCard(card, entry);
   card.addEventListener('click',       () => abrirDetalleExamen(card));
   card.addEventListener('contextmenu', e  => openCtxExamen(e, card));
+  addLongPress(card, (x, y) => openCtxExamen({ clientX: x, clientY: y }, card));
   return card;
 }
 
@@ -1824,7 +1848,7 @@ const ctxMenuExamen  = document.getElementById('ctxMenuExamen');
 let   ctxExamenTarget = null;
 
 function openCtxExamen(e, card) {
-  e.preventDefault();
+  if (e.preventDefault) e.preventDefault();
   ctxExamenTarget = card;
   const x = Math.min(e.clientX, window.innerWidth  - 220);
   const y = Math.min(e.clientY, window.innerHeight - 140);
@@ -2151,6 +2175,7 @@ function buildProyectoCard(entry) {
   actualizarLinksCountProyectoCard(card, entry);
   card.addEventListener('click',       () => abrirDetalleProyecto(card));
   card.addEventListener('contextmenu', e  => openCtxProyecto(e, card));
+  addLongPress(card, (x, y) => openCtxProyecto({ clientX: x, clientY: y }, card));
   return card;
 }
 
@@ -2200,7 +2225,7 @@ const ctxMenuProyecto  = document.getElementById('ctxMenuProyecto');
 let   ctxProyectoTarget = null;
 
 function openCtxProyecto(e, card) {
-  e.preventDefault();
+  if (e.preventDefault) e.preventDefault();
   ctxProyectoTarget = card;
   const x = Math.min(e.clientX, window.innerWidth  - 220);
   const y = Math.min(e.clientY, window.innerHeight - 140);

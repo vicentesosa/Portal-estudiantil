@@ -2065,14 +2065,75 @@ body {
   .tareas-cols   { grid-template-columns: 1fr; }
   .cal-layout    { grid-template-columns: 1fr; }
 }
+
+/* ── Tablet (≤768px) ── */
+@media (max-width: 768px) {
+  /* Hero: apila texto arriba, IA abajo */
+  .inicio-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 2rem 1.5rem 1.8rem;
+    gap: 1.2rem;
+  }
+  .hero-ia-wrap {
+    min-width: unset;
+    width: 100%;
+  }
+  /* Stats: 2 columnas en tablet */
+  .inicio-stats { grid-template-columns: repeat(2,1fr); padding: 1.2rem 1.5rem; }
+  .quick-nav    { padding: 0 1.5rem; }
+  .inicio-label { padding-left:1.5rem; padding-right:1.5rem; }
+  /* Apuntes: reducir padding lateral */
+  .apunte-row-header { padding: 1rem 1.5rem; }
+  .apunte-row-body   { padding: .8rem 1.5rem 1.2rem calc(1.5rem + 38px + 1rem); }
+  .apuntes-page-header { padding: 1.5rem 1.5rem 1rem; }
+}
+
+/* ── Móvil (≤700px) ── */
 @media (max-width: 700px) {
+  /* Header */
+  .logo span  { display:none; }
   .tabs .tab span { display:none; }
-  .tabs .tab { padding:.45rem .75rem; }
-  .inicio-hero { padding:2rem 1.3rem; }
-  .inicio-stats, .quick-nav, .inicio-actividades, .inicio-label { padding-left:1.3rem; padding-right:1.3rem; }
-  .hero-title { font-size:2rem; }
-  .page-inner { padding:1.5rem 1.2rem 3rem; }
+  .tabs .tab  { padding:.45rem .65rem; }
   .user-text  { display:none; }
+  .user-avatar { font-size: 1.7rem; }
+
+  /* Hero */
+  .inicio-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1.5rem 1.2rem;
+    gap: 1rem;
+  }
+  .hero-ia-wrap { min-width: unset; width: 100%; }
+  .hero-title   { font-size: 1.9rem; }
+  .hero-sub     { font-size: .9rem; margin-bottom: 1rem; }
+
+  /* Stats: 2 cols en móvil */
+  .inicio-stats {
+    grid-template-columns: repeat(2,1fr);
+    padding: 1rem 1.2rem;
+    gap: .75rem;
+  }
+  .stat-card { padding: .85rem 1rem; gap: .7rem; }
+  .stat-icon { width:38px; height:38px; font-size:1rem; }
+  .stat-info h3 { font-size:1.3rem; }
+
+  /* Quick nav */
+  .quick-nav    { grid-template-columns: 1fr; padding: 0 1.2rem; gap:.75rem; }
+  .inicio-label { padding-left:1.2rem; padding-right:1.2rem; }
+
+  /* Page inner */
+  .page-inner { padding:1.3rem 1rem 3rem; }
+
+  /* Apuntes */
+  .apunte-row-header { padding:.9rem 1rem; }
+  .apunte-row-body   { padding:.8rem 1rem 1.2rem 1rem; }
+  .apuntes-page-header { padding: 1.2rem 1rem .9rem; }
+
+  /* Menus contexto: botones más grandes en móvil para facilitar el toque */
+  .ctx-menu { min-width: 200px; }
+  .ctx-item  { padding: .75rem 1rem; font-size: .95rem; }
 }
 
 /* ===== Brillo estático — secciones de inicio ===== */
@@ -2090,3 +2151,21 @@ body {
   border-bottom-color: rgba(255,255,255,.15) !important;
   box-shadow: 0 0 6px 1px rgba(255,255,255,.06);
 }
+
+/* ===== Hint "mantené presionado" — solo en touch ===== */
+/* Mostrar hint de long-press en dispositivos táctiles */
+@media (hover: none) and (pointer: coarse) {
+  .touch-hint {
+    display: flex !important;
+  }
+}
+.touch-hint {
+  display: none;
+  align-items: center;
+  gap: .4rem;
+  font-size: .75rem;
+  color: var(--muted);
+  padding: .5rem 0 .2rem;
+  opacity: .7;
+}
+.touch-hint i { font-size: .8rem; }
