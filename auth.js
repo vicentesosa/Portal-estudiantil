@@ -20,6 +20,13 @@ const switchToReg    = document.getElementById('switchToReg');
 const switchToLogin  = document.getElementById('switchToLogin');
 const logoutBtn      = document.getElementById('logoutBtn');
 const userEmailSpan  = document.getElementById('userEmailSpan');
+const authCloseBtn   = document.getElementById('authCloseBtn');
+const userInfoArea   = document.getElementById('userInfoArea');
+const userDropdown   = document.getElementById('userDropdown');
+const dropdownLogin  = document.getElementById('dropdownLogin');
+const dropdownRegister = document.getElementById('dropdownRegister');
+
+let isAuthenticated = false;
 
 // ── Sync con debounce ──
 let syncTimer = null;
@@ -60,8 +67,91 @@ async function cargarDatosUsuario(userId) {
 
 // ── Mostrar usuario en header ──
 function mostrarUsuarioHeader(email) {
+  isAuthenticated = true;
   if (userEmailSpan) userEmailSpan.textContent = email.split('@')[0];
   if (logoutBtn) logoutBtn.style.display = 'flex';
+  cerrarDropdown();
+}
+
+// ── Mostrar/ocultar overlay ──
+function abrirOverlay(panel) {
+  authOverlay.style.display = 'flex';
+  if (panel === 'registro') mostrarRegistro();
+  else mostrarLogin();
+}
+
+function cerrarOverlay() {
+  authOverlay.style.display = 'none';
+}
+
+// ── Dropdown del usuario ──
+function abrirDropdown() {
+  userDropdown.classList.add('open');
+}
+
+function cerrarDropdown() {
+  userDropdown.classList.remove('open');
+}
+
+// ── Cerrar overlay al hacer click fuera del card ──
+authOverlay.addEventListener('click', e => {
+  if (e.target === authOverlay) cerrarOverlay();
+});
+
+// ── Botón X para cerrar overlay ──
+if (authCloseBtn) {
+  authCloseBtn.addEventListener('click', cerrarOverlay);
+}
+
+// ── Interceptar cualquier botón cuando no hay sesión (fase de captura) ──
+document.addEventListener('click', e => {
+  if (isAuthenticated) return;
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  // Excluir botones dentro del overlay de auth
+  if (authOverlay.contains(btn)) return;
+  // Excluir el área de usuario (tiene su propio dropdown)
+  if (userInfoArea && userInfoArea.contains(e.target)) return;
+  // Excluir botones del dropdown de usuario
+  if (userDropdown && userDropdown.contains(btn)) return;
+  // Bloquear el click y mostrar overlay
+  e.stopPropagation();
+  e.preventDefault();
+  abrirOverlay('login');
+}, true);
+
+// ── Click en área de usuario: toggle dropdown ──
+if (userInfoArea) {
+  userInfoArea.addEventListener('click', e => {
+    if (isAuthenticated) return;
+    e.stopPropagation();
+    userDropdown.classList.contains('open') ? cerrarDropdown() : abrirDropdown();
+  });
+}
+
+// ── Cerrar dropdown al hacer click fuera ──
+document.addEventListener('click', e => {
+  if (!userDropdown || !userDropdown.classList.contains('open')) return;
+  if (userInfoArea && userInfoArea.contains(e.target)) return;
+  if (userDropdown.contains(e.target)) return;
+  cerrarDropdown();
+});
+
+// ── Botones del dropdown ──
+if (dropdownLogin) {
+  dropdownLogin.addEventListener('click', e => {
+    e.stopPropagation();
+    cerrarDropdown();
+    abrirOverlay('login');
+  });
+}
+
+if (dropdownRegister) {
+  dropdownRegister.addEventListener('click', e => {
+    e.stopPropagation();
+    cerrarDropdown();
+    abrirOverlay('registro');
+  });
 }
 
 // ── Alternar entre login y registro ──
@@ -81,6 +171,15 @@ function mostrarRegistro() {
 switchToReg.addEventListener('click',   e => { e.preventDefault(); mostrarRegistro(); });
 switchToLogin.addEventListener('click', e => { e.preventDefault(); mostrarLogin(); });
 
+function mensajeErrorRed(msg) {
+  if (!msg) return 'Error desconocido. Intentá de nuevo.';
+  const m = msg.toLowerCase();
+  if (m.includes('failed to fetch') || m.includes('networkerror') || m.includes('load failed')) {
+    return 'No se pudo conectar al servidor. Verificá tu conexión a internet e intentá de nuevo en unos momentos.';
+  }
+  return 'Error: ' + msg;
+}
+
 // ── Login ──
 loginBtn.addEventListener('click', async () => {
   const email    = loginEmail.value.trim();
@@ -89,15 +188,22 @@ loginBtn.addEventListener('click', async () => {
   loginBtn.disabled = true;
   loginBtn.textContent = 'Entrando...';
   loginError.textContent = '';
-  const { error } = await sb.auth.signInWithPassword({ email, password });
-  if (error) {
-    if (error.message?.toLowerCase().includes('invalid login') || error.message?.toLowerCase().includes('invalid credentials')) {
-      loginError.textContent = 'Email o contraseña incorrectos.';
-    } else if (error.message?.toLowerCase().includes('email not confirmed')) {
-      loginError.textContent = 'Debés confirmar tu email antes de iniciar sesión.';
-    } else {
-      loginError.textContent = 'Error: ' + error.message;
+  try {
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) {
+      const m = error.message?.toLowerCase() ?? '';
+      if (m.includes('invalid login') || m.includes('invalid credentials')) {
+        loginError.textContent = 'Email o contraseña incorrectos.';
+      } else if (m.includes('email not confirmed')) {
+        loginError.textContent = 'Debés confirmar tu email antes de iniciar sesión.';
+      } else {
+        loginError.textContent = mensajeErrorRed(error.message);
+      }
+      loginBtn.disabled = false;
+      loginBtn.textContent = 'Entrar';
     }
+  } catch (e) {
+    loginError.textContent = mensajeErrorRed(e?.message);
     loginBtn.disabled = false;
     loginBtn.textContent = 'Entrar';
   }
@@ -115,15 +221,31 @@ regBtn.addEventListener('click', async () => {
   if (pass.length < 6)           { regError.textContent = 'La contraseña debe tener al menos 6 caracteres.'; return; }
   regBtn.disabled = true;
   regBtn.textContent = 'Creando cuenta...';
+  regError.style.color = '';
   regError.textContent = '';
-  const { error } = await sb.auth.signUp({ email, password: pass });
-  if (error) {
-    regError.textContent = 'Error: ' + error.message;
-    regBtn.disabled = false;
-    regBtn.textContent = 'Crear cuenta';
-  } else {
-    regError.style.color = 'var(--green)';
-    regError.textContent = '¡Cuenta creada! Revisá tu email para confirmar.';
+  try {
+    const { data, error } = await sb.auth.signUp({ email, password: pass });
+    if (error) {
+      const m = error.message?.toLowerCase() ?? '';
+      if (m.includes('user already registered') || m.includes('already registered')) {
+        regError.textContent = 'Este email ya tiene una cuenta. Iniciá sesión.';
+      } else {
+        regError.textContent = mensajeErrorRed(error.message);
+      }
+      regBtn.disabled = false;
+      regBtn.textContent = 'Crear cuenta';
+    } else if (data?.user && data.user.identities && data.user.identities.length === 0) {
+      regError.textContent = 'Este email ya tiene una cuenta. Iniciá sesión.';
+      regBtn.disabled = false;
+      regBtn.textContent = 'Crear cuenta';
+    } else {
+      regError.style.color = 'var(--green)';
+      regError.textContent = '¡Cuenta creada! Revisá tu email para confirmar.';
+      regBtn.disabled = false;
+      regBtn.textContent = 'Crear cuenta';
+    }
+  } catch (e) {
+    regError.textContent = mensajeErrorRed(e?.message);
     regBtn.disabled = false;
     regBtn.textContent = 'Crear cuenta';
   }
@@ -147,7 +269,7 @@ sb.auth.onAuthStateChange(async (event, session) => {
       sessionStorage.setItem('portal_loaded', '1');
       location.reload();
     } else {
-      authOverlay.style.display = 'none';
+      cerrarOverlay();
       mostrarUsuarioHeader(session.user.email);
     }
   } else if (event === 'SIGNED_OUT') {
@@ -165,11 +287,9 @@ sb.auth.onAuthStateChange(async (event, session) => {
       sessionStorage.setItem('portal_loaded', '1');
       location.reload();
     } else {
-      authOverlay.style.display = 'none';
+      cerrarOverlay();
       mostrarUsuarioHeader(session.user.email);
     }
-  } else {
-    authOverlay.style.display = 'flex';
-    mostrarLogin();
   }
+  // Sin sesión: la página se muestra normalmente, sin overlay
 })();

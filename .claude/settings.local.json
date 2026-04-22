@@ -5,7 +5,8 @@
       "Bash(unzip -l \"../AulaSync rediseño.zip\")",
       "Bash(unzip -l \"AulaSync rediseño.zip\")",
       "Bash(unzip -o \"AulaSync rediseño.zip\" \"AulaSync Home.html\" -d /tmp/aulasync_redesign)",
-      "Bash(unzip -o \"AulaSync rediseño.zip\" -d /tmp/aulasync_redesign/)"
+      "Bash(unzip -o \"AulaSync rediseño.zip\" -d /tmp/aulasync_redesign/)",
+      "Bash(grep -n \"//\" /c/Users/USUARIO/paginas/AulaSync/auth.js)"
     ]
   }
 }

@@ -489,10 +489,44 @@
     /* Auth overlay */
     .auth-overlay { background: rgba(6,11,20,0.97) !important; }
     .auth-card {
+      position: relative !important;
       background: rgba(11,18,32,0.95) !important;
       border: 1px solid rgba(0,229,255,0.15) !important;
       box-shadow: 0 0 60px rgba(0,229,255,0.1) !important;
     }
+    .auth-close-btn {
+      position: absolute; top: 12px; right: 14px;
+      background: transparent; border: none;
+      color: var(--new-dim); font-size: 1.1rem;
+      cursor: pointer; padding: 4px 8px; border-radius: 6px;
+      line-height: 1; transition: color .15s, background .15s;
+    }
+    .auth-close-btn:hover { color: var(--new-text); background: rgba(255,255,255,0.08); }
+
+    /* User info dropdown */
+    .user-info-wrapper { position: relative; }
+    .user-info { cursor: pointer; }
+    .user-dropdown {
+      position: absolute; top: calc(100% + 10px); right: 0;
+      background: rgba(11,18,32,0.98);
+      border: 1px solid rgba(0,229,255,0.2);
+      border-radius: 10px; padding: 8px;
+      display: none; flex-direction: column; gap: 4px;
+      min-width: 180px; z-index: 300;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      animation: tab-fade .15s ease forwards;
+    }
+    .user-dropdown.open { display: flex; }
+    .user-dropdown-item {
+      background: transparent; border: none;
+      color: var(--new-text); padding: 10px 14px;
+      border-radius: 7px; cursor: pointer;
+      display: flex; align-items: center; gap: 10px;
+      font-size: 0.9rem; font-family: inherit;
+      transition: background .15s; text-align: left; width: 100%;
+    }
+    .user-dropdown-item:hover { background: rgba(0,229,255,0.1); }
+    .user-dropdown-item i { color: var(--new-cyan); width: 16px; }
     .auth-logo { color: var(--new-cyan) !important; }
     .auth-title { color: var(--new-text) !important; }
     .auth-input {
@@ -542,6 +576,7 @@
   <!-- ========== AUTH OVERLAY ========== -->
   <div class="auth-overlay" id="authOverlay">
     <div class="auth-card">
+      <button class="auth-close-btn" id="authCloseBtn" title="Cerrar">✕</button>
       <div class="auth-logo">
         <i class="fas fa-graduation-cap"></i>
         <span>AulaSync</span>
@@ -608,15 +643,25 @@
       </button>
     </nav>
 
-    <div class="user-info">
-      <div class="user-avatar-new">E</div>
-      <div class="user-text">
-        <span class="user-name" id="userEmailSpan">Estudiante</span>
-        <span class="user-grade">5° Año</span>
+    <div class="user-info-wrapper">
+      <div class="user-info" id="userInfoArea">
+        <div class="user-avatar-new">E</div>
+        <div class="user-text">
+          <span class="user-name" id="userEmailSpan">Estudiante</span>
+          <span class="user-grade">5° Año</span>
+        </div>
+        <button class="logout-btn" id="logoutBtn" style="display:none" title="Cerrar sesión">
+          <i class="fas fa-sign-out-alt"></i>
+        </button>
       </div>
-      <button class="logout-btn" id="logoutBtn" style="display:none" title="Cerrar sesión">
-        <i class="fas fa-sign-out-alt"></i>
-      </button>
+      <div class="user-dropdown" id="userDropdown">
+        <button class="user-dropdown-item" id="dropdownLogin">
+          <i class="fas fa-sign-in-alt"></i> Iniciar sesión
+        </button>
+        <button class="user-dropdown-item" id="dropdownRegister">
+          <i class="fas fa-user-plus"></i> Registrarse
+        </button>
+      </div>
     </div>
   </header>
 
