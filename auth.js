@@ -175,8 +175,10 @@ function mensajeErrorRed(msg) {
   if (!msg) return 'Error desconocido. Intentá de nuevo.';
   const m = msg.toLowerCase();
   if (m.includes('failed to fetch') || m.includes('networkerror') || m.includes('load failed')) {
+    console.error('[AulaSync] Error de red al conectar con Supabase:', msg);
     return 'No se pudo conectar al servidor. Verificá tu conexión a internet e intentá de nuevo en unos momentos.';
   }
+  console.error('[AulaSync] Error de Supabase:', msg);
   return 'Error: ' + msg;
 }
 
@@ -263,7 +265,7 @@ if (logoutBtn) {
 
 // ── Escuchar cambios de auth ──
 sb.auth.onAuthStateChange(async (event, session) => {
-  if (event === 'SIGNED_IN' && session) {
+  if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session) {
     if (!sessionStorage.getItem('portal_loaded')) {
       await cargarDatosUsuario(session.user.id);
       sessionStorage.setItem('portal_loaded', '1');
@@ -277,19 +279,3 @@ sb.auth.onAuthStateChange(async (event, session) => {
     location.reload();
   }
 });
-
-// ── Inicializar: verificar sesión al cargar ──
-(async function initAuth() {
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) {
-    if (!sessionStorage.getItem('portal_loaded')) {
-      await cargarDatosUsuario(session.user.id);
-      sessionStorage.setItem('portal_loaded', '1');
-      location.reload();
-    } else {
-      cerrarOverlay();
-      mostrarUsuarioHeader(session.user.email);
-    }
-  }
-  // Sin sesión: la página se muestra normalmente, sin overlay
-})();
